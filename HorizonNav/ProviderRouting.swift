@@ -96,6 +96,14 @@ enum RouteComparison {
         return Array(mine.prefix(2)) + [best]
     }
 
+    static func remainingPath(of route: RouteOption, at progress: Double) -> RouteOption? {
+        guard let start = RouteGeometry.coordinate(on: route, at: progress),
+              let index = route.cumulative.firstIndex(where: { $0 > progress }) else { return nil }
+        return RouteOption(name: route.name, distance: route.length - progress, expectedTravelTime: 0,
+                           coordinates: [start] + Array(route.coordinates[index...]), steps: [],
+                           advisories: [], source: route.source)
+    }
+
     /// True when `b` runs along `a` almost all the way: 21 of 23 sample points within 60 m, lengths within 6%.
     static func sameRoad(_ a: RouteOption, _ b: RouteOption) -> Bool {
         guard a.coordinates.count >= 2, b.coordinates.count >= 2 else { return false }

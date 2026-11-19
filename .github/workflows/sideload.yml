@@ -1,0 +1,77 @@
+name: iPhone sideload build
+
+on:
+  push:
+    branches: [feature/android-parity-ios]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sideload-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [simulator, device]
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Xcode project
+        run: |
+          xcodebuild -version
+          brew install xcodegen
+          xcodegen generate
+      - uses: actions/cache@v4
+        with:
+          path: build/packages
+          key: horizon-packages-${{ runner.os }}-${{ runner.arch }}-xcode26.3-${{ hashFiles('project.yml', '**/Package.resolved') }}
+      - name: Resolve Swift packages
+        run: xcodebuild -project HorizonNav.xcodeproj -scheme HorizonNav -resolvePackageDependencies -clonedSourcePackagesDirPath build/packages
+      - name: Test on iPhone Simulator
+        if: matrix.target == 'simulator'
+        timeout-minutes: 17
+        run: |
+          pack="$PWD/build/valhalla-singapore"
+          mkdir -p "$pack"
+          for file in valhalla.json admins.sqlite tiles.tar; do
+            curl --fail --location --retry 2 --max-time 180 \
+              "https://github.com/benbishop028-arch/Horizon-Maps/releases/download/pack-singapore/$file" \
+              --output "$pack/$file"
+          done
+          export TEST_RUNNER_HN_VALHALLA_PACK="$pack"
+          device=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          runtimes = json.load(sys.stdin)["devices"]
+          print(next(d["udid"] for k in sorted(runtimes, reverse=True)
+                     if k.startswith("com.apple.CoreSimulator.SimRuntime.iOS-26-2")
+                     for d in runtimes[k] if d["name"].startswith("iPhone")))
+          ')
+          set -o pipefail
+          xcodebuild -project HorizonNav.xcodeproj -scheme HorizonNav -destination "platform=iOS Simulator,id=$device" \
+            -derivedDataPath build/simulator -clonedSourcePackagesDirPath build/packages \
+            -parallel-testing-enabled NO -resultBundlePath build/HorizonNavTests.xcresult CODE_SIGNING_ALLOWED=NO CODE_SIGN_ENTITLEMENTS= test
+      - name: Build and verify unsigned iPhone IPA
+        if: matrix.target == 'device'
+        run: bash scripts/build-sideload.sh
+      - uses: actions/upload-artifact@v4
+        if: matrix.target == 'device'
+        with:
+          name: HorizonNav-AndroidStyle-unsigned
+          path: build/HorizonNav-AndroidStyle-unsigned.ipa
+          if-no-files-found: error
+      - name: Upload test results
+        if: always() && matrix.target == 'simulator'
+        uses: actions/upload-artifact@v4
+        with:
+          name: HorizonNavTests
+          path: build/HorizonNavTests.xcresult
+          if-no-files-found: ignore

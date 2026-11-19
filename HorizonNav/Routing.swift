@@ -203,6 +203,23 @@ enum RouteGeometry {
         return NavigationPolicy.angleDifference(from: bearing(coordinates[before], pivot), to: bearing(pivot, coordinates[after]))
     }
 
+    static func coordinate(on route: RouteOption, at progress: CLLocationDistance) -> CLLocationCoordinate2D? {
+        guard let first = route.coordinates.first, let last = route.coordinates.last else { return nil }
+        if progress <= 0 { return first }
+        if progress >= route.length { return last }
+        var low = 0
+        var high = route.cumulative.count - 1
+        while high - low > 1 {
+            let mid = (low + high) / 2
+            if route.cumulative[mid] <= progress { low = mid } else { high = mid }
+        }
+        let start = route.coordinates[low], end = route.coordinates[high]
+        let span = route.cumulative[high] - route.cumulative[low]
+        let point = RoadPoint(lat: start.latitude, lon: start.longitude).interpolate(
+            to: RoadPoint(lat: end.latitude, lon: end.longitude), fraction: (progress - route.cumulative[low]) / span)
+        return CLLocationCoordinate2D(latitude: point.lat, longitude: point.lon)
+    }
+
     /// Nearest point on the route to a location: distance from the route, progress along it, and segment index.
     struct Projection {
         var distance: CLLocationDistance

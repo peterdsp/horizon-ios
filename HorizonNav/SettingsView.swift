@@ -8,6 +8,8 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.routingProvider) private var routingProvider = "auto"
     @AppStorage(AppSettings.Keys.searchProvider) private var searchProvider = "auto"
     @AppStorage(AppSettings.Keys.mapSource) private var mapSource = "apple"
+    @AppStorage(AppSettings.Keys.mapPerspective) private var mapPerspective = PhoneMapPerspective.automatic
+    @AppStorage(AppSettings.Keys.vehicleScale) private var vehicleScale = 1.0
     @AppStorage(AppSettings.Keys.soundMode) private var soundMode = 0
     @AppStorage(AppSettings.Keys.cameraWarnings) private var cameraWarnings = true
     @AppStorage(AppSettings.Keys.carPlayAppearance) private var carPlayAppearance = "car"
@@ -60,11 +62,20 @@ struct SettingsView: View {
                     Picker("Map", selection: $mapSource) {
                         Text("Apple Maps").tag("apple")
                         Text("OpenStreetMap").tag("openstreetmap")
+                        Text("Mapbox 3D").tag("mapbox")
+                    }
+                    Picker("Navigation perspective", selection: $mapPerspective) {
+                        ForEach(PhoneMapPerspective.allCases, id: \.self) { Text($0.label).tag($0) }
+                    }
+                    VStack(alignment: .leading) {
+                        Text("Vehicle size")
+                        Slider(value: $vehicleScale, in: 0.65...1.55, step: 0.05)
+                            .accessibilityLabel("Vehicle size")
                     }
                 } header: {
                     Text("Map")
                 } footer: {
-                    Text("Apple Maps shows live traffic. The OpenStreetMap map draws areas saved in Offline maps, and is used automatically when there is no signal.")
+                    Text("Mapbox uses your public pk. token. OpenStreetMap draws saved areas and is used offline or if the Mapbox map cannot load.")
                 }
             }
             .navigationTitle("Settings")

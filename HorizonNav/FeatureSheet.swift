@@ -9,7 +9,7 @@ struct FeatureSheet: View {
         var id: String { rawValue }
     }
 
-    static let featureRevision = 3
+    static let featureRevision = 4
     private static let seenKey = "featureSheetRevisionSeen"
 
     /// The guide on first launch, what's new after an update with new features, otherwise nothing.
@@ -36,11 +36,15 @@ struct FeatureSheet: View {
     private var items: [Item] {
         var list = [
             Item(symbol: "point.topleft.down.to.point.bottomright.curvepath", title: "Choose your route",
-                 detail: "Search for a place. Horizon Nav shows the fastest route and any alternatives on the map. Tap one to select it, then tap Start."),
+                 detail: "Search for a place. Horizon Nav shows the fastest route and any alternatives on the map. Tap one to select it, then tap Start navigation."),
             Item(symbol: "arrow.turn.up.right", title: "Turn-by-turn guidance",
                  detail: "The next turn and the distance to it stay at the top of the screen, and the arrival time updates as you drive."),
             Item(symbol: "arrow.triangle.2.circlepath", title: "Automatic rerouting",
                  detail: "Leave the route and Horizon Nav finds a new one from where you are, without you doing anything."),
+            Item(symbol: "trafficlight", title: "Upcoming road events",
+                 detail: "The route timeline shows confirmed traffic lights, stop signs and railway crossings where OpenStreetMap has enough information."),
+            Item(symbol: "view.3d", title: "Mapbox 3D",
+                 detail: "Enter a public Mapbox token and choose Mapbox 3D in Settings. Guidance can switch between 2D, 3D and an adaptive camera."),
             Item(symbol: "map.fill", title: "Traffic on the map",
                  detail: "Apple Maps traffic is shown on the phone and in the car, and route times take current traffic into account."),
             Item(symbol: "car.fill", title: "CarPlay",
@@ -56,7 +60,7 @@ struct FeatureSheet: View {
         ]
         if kind == .guide {
             list.insert(Item(symbol: "magnifyingglass", title: "Search anywhere",
-                             detail: "Type a place or address in Where to? at the bottom of the map."), at: 0)
+                             detail: "Type a place or address in Where to? at the top of the map."), at: 0)
         }
         return list
     }

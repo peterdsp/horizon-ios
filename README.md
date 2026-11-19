@@ -10,6 +10,20 @@ Each [release](../../releases) has an unsigned `.ipa`. Install it with a sideloa
 
 Keys for TomTom or Mapbox are optional: add them in the app's Settings. Without them, Apple Maps plans routes and searches.
 
+## iPhone navigation display
+
+Settings > Map offers Apple Maps, Mapbox 3D and offline-capable OpenStreetMap. The Mapbox renderer uses the public `pk.` token from Settings or the project's untracked build configuration. If the renderer has no token or cannot load its style, the phone falls back to OpenStreetMap. Mapbox Standard provides 3D buildings when its tiles include them. Mapbox Terrain DEM and Traffic require access to those tiles. The car is an original bundled glTF model on the Mapbox 3D view and a directional 2D marker on the other views.
+
+During a drive, the timeline pulls only the upcoming corridor from Overpass. It checks each traffic light, stop sign and level crossing against OSM road membership, approach geometry and documented direction tags. Events with insufficient data can be omitted. Distances are measured along the current route. Already fetched data is cached in memory for one hour and can cover a brief loss of connection. The online query shares sampled coordinates of the upcoming route segment with the public Overpass service.
+
+A periodic Mapbox or TomTom traffic check can offer a materially quicker route. It asks before switching and discards suggestions when the origin is no longer close to the car. The CarPlay target continues to use the existing Apple Maps and OpenStreetMap views.
+
+## Build an unsigned IPA
+
+The [iPhone sideload build](.github/workflows/sideload.yml) generates the Xcode project, resolves Swift packages, runs the iPhone Simulator unit tests and builds Release for iOS devices. The workflow publishes `HorizonNav-AndroidStyle-unsigned.ipa` in its GitHub Actions artifact. It validates the device platform and arm64 executable and removes the CarPlay scene declarations from the sideload package. The entitled Xcode configuration remains available for teams with Apple's CarPlay Maps capability.
+
+Download and extract the GitHub Actions artifact ZIP, then open the IPA with AltStore, SideStore or Sideloadly to sign and install it. The IPA itself is unsigned. For an equivalent local build on a Mac, run `xcodegen generate` and `bash scripts/build-sideload.sh`.
+
 ## Open and run
 
 1. Install XcodeGen: `brew install xcodegen`.

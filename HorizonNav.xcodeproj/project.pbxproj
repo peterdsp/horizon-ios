@@ -51,6 +51,14 @@
 		F9950A2E8C8C15508E1937C7 /* TomTomProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9969FC5DCF189506D4387429 /* TomTomProvider.swift */; };
 		FCBB74BE74D87400D07AB2B0 /* RouteGuidance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 480671AE6B396154B1004202 /* RouteGuidance.swift */; };
 		FF1A8B98A676021D4AB3C1A8 /* CarPlayClusterSceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF165B8E3B9616FD148DDE41 /* CarPlayClusterSceneDelegate.swift */; };
+		C28B8CD13742C4CE5031DFAE /* MapboxPhoneMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055AF126E250077846F8160B /* MapboxPhoneMap.swift */; };
+		63445673C1ED97095C514C6D /* PhoneMapPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53935BFD40F1A9746F81B8B2 /* PhoneMapPolicy.swift */; };
+		D34E8D63CB3C39D01BFEF168 /* PhoneMapRendering.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB885BC901F1B9AEC74E435 /* PhoneMapRendering.swift */; };
+		91A01BA4D639D9D9C26275E2 /* PhoneNavigationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47EEDB78FCF0C348F8554333 /* PhoneNavigationState.swift */; };
+		3077D05551ABC09E844182F6 /* RoadEvents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7A6EC9C116023E8A882222 /* RoadEvents.swift */; };
+		EDF9C898B4769674B9D4DA65 /* HorizonVehicle.glb in Resources */ = {isa = PBXBuildFile; fileRef = 54953A76EDEB55E8E7EAFBF2 /* HorizonVehicle.glb */; };
+		680358C7405F2A433EE259BE /* PhoneNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C10A186EF2C1B98D867AE52 /* PhoneNavigationTests.swift */; };
+		7B0388FC951A39A363C2EAC7 /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 8E0D6BC0AE52E1871004B43B /* MapboxMaps */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -111,6 +119,13 @@
 		EAF4CC0FE29AE51AD1E8C3F4 /* HeadUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadUnitTests.swift; sourceTree = "<group>"; };
 		FC322B048AB36FEB74AAF681 /* FeatureSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureSheet.swift; sourceTree = "<group>"; };
 		FE909D88A142C2D80B58921A /* SpeedCameras.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedCameras.swift; sourceTree = "<group>"; };
+		055AF126E250077846F8160B /* MapboxPhoneMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapboxPhoneMap.swift; sourceTree = "<group>"; };
+		53935BFD40F1A9746F81B8B2 /* PhoneMapPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneMapPolicy.swift; sourceTree = "<group>"; };
+		5FB885BC901F1B9AEC74E435 /* PhoneMapRendering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneMapRendering.swift; sourceTree = "<group>"; };
+		47EEDB78FCF0C348F8554333 /* PhoneNavigationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNavigationState.swift; sourceTree = "<group>"; };
+		5A7A6EC9C116023E8A882222 /* RoadEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadEvents.swift; sourceTree = "<group>"; };
+		54953A76EDEB55E8E7EAFBF2 /* HorizonVehicle.glb */ = {isa = PBXFileReference; lastKnownFileType = file; path = HorizonVehicle.glb; sourceTree = "<group>"; };
+		4C10A186EF2C1B98D867AE52 /* PhoneNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNavigationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -118,6 +133,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7B0388FC951A39A363C2EAC7 /* MapboxMaps in Frameworks */,
 				C673F4BF74B0CA8E245C79AB /* MapLibre in Frameworks */,
 				1AFB6C89D1C750E4991DC17C /* Valhalla in Frameworks */,
 			);
@@ -129,6 +145,7 @@
 		3A533796CB8529A29D0D6E4E /* HorizonNavTests */ = {
 			isa = PBXGroup;
 			children = (
+				4C10A186EF2C1B98D867AE52 /* PhoneNavigationTests.swift */,
 				4396885FAA2FDB1ADF2152C3 /* GuidanceTests.swift */,
 				EAF4CC0FE29AE51AD1E8C3F4 /* HeadUnitTests.swift */,
 				17B87C41CD9660D1DAADB5D2 /* OfflineTests.swift */,
@@ -155,6 +172,12 @@
 				30FAA25192D896D177E692D8 /* CarPlayManeuvers.swift */,
 				0EDC71B9B25B7AD31784DF76 /* CarPlayMapViewController.swift */,
 				C987D1A71B7F9E37407D60C1 /* CarPlaySceneDelegate.swift */,
+				055AF126E250077846F8160B /* MapboxPhoneMap.swift */,
+				53935BFD40F1A9746F81B8B2 /* PhoneMapPolicy.swift */,
+				5FB885BC901F1B9AEC74E435 /* PhoneMapRendering.swift */,
+				47EEDB78FCF0C348F8554333 /* PhoneNavigationState.swift */,
+				5A7A6EC9C116023E8A882222 /* RoadEvents.swift */,
+				54953A76EDEB55E8E7EAFBF2 /* HorizonVehicle.glb */,
 				5039D498498215F2014D9995 /* ContentView.swift */,
 				FC322B048AB36FEB74AAF681 /* FeatureSheet.swift */,
 				12B0595D302F36C1C3D85A2B /* HorizonNav.entitlements */,
@@ -227,6 +250,7 @@
 			buildConfigurationList = B2E0D0E5E0353347E1A94B33 /* Build configuration list for PBXNativeTarget "HorizonNav" */;
 			buildPhases = (
 				18D19F1739B14E8BAAAA5983 /* Sources */,
+				75537A3FB24AFEEB21221C73 /* Resources */,
 				298ABA44897A2D5CFD131C44 /* Frameworks */,
 			);
 			buildRules = (
@@ -235,6 +259,7 @@
 			);
 			name = HorizonNav;
 			packageProductDependencies = (
+				8E0D6BC0AE52E1871004B43B /* MapboxMaps */,
 				698AFB20F315F26CAF7EE596 /* MapLibre */,
 				6210EADF3CF7862C3CA0E4A0 /* Valhalla */,
 			);
@@ -290,6 +315,7 @@
 			mainGroup = EDFC35D6A5FAA1D9F5C1FB1B;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				6A616ABB061B9F07D0588BC0 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */,
 				F0B818756A6FB57C7B5DC069 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
 				C398308A2305F9D2A1BC407A /* XCRemoteSwiftPackageReference "valhalla-mobile" */,
 			);
@@ -319,6 +345,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		75537A3FB24AFEEB21221C73 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EDF9C898B4769674B9D4DA65 /* HorizonVehicle.glb in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -326,6 +360,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C28B8CD13742C4CE5031DFAE /* MapboxPhoneMap.swift in Sources */,
+				63445673C1ED97095C514C6D /* PhoneMapPolicy.swift in Sources */,
+				D34E8D63CB3C39D01BFEF168 /* PhoneMapRendering.swift in Sources */,
+				91A01BA4D639D9D9C26275E2 /* PhoneNavigationState.swift in Sources */,
+				3077D05551ABC09E844182F6 /* RoadEvents.swift in Sources */,
 				AE50142935E59CD6EEA2C1FA /* AppDelegate.swift in Sources */,
 				FF1A8B98A676021D4AB3C1A8 /* CarPlayClusterSceneDelegate.swift in Sources */,
 				61B571428B84DA8EBAD98DB7 /* CarPlayManeuvers.swift in Sources */,
@@ -363,6 +402,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				680358C7405F2A433EE259BE /* PhoneNavigationTests.swift in Sources */,
 				C36A3D7D3A3DC8E8D0D813F4 /* GuidanceTests.swift in Sources */,
 				A908DBD90950E8F642B634A7 /* HeadUnitTests.swift in Sources */,
 				386943218610DC1A575A4506 /* OfflineTests.swift in Sources */,
@@ -626,6 +666,14 @@
 				minimumVersion = 6.31.0;
 			};
 		};
+		6A616ABB061B9F07D0588BC0 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mapbox/mapbox-maps-ios.git";
+			requirement = {
+				kind = exactVersion;
+				version = 11.19.6;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -638,6 +686,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F0B818756A6FB57C7B5DC069 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */;
 			productName = MapLibre;
+		};
+		8E0D6BC0AE52E1871004B43B /* MapboxMaps */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6A616ABB061B9F07D0588BC0 /* XCRemoteSwiftPackageReference "mapbox-maps-ios" */;
+			productName = MapboxMaps;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

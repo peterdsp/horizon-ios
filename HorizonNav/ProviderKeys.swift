@@ -69,6 +69,8 @@ enum AppSettings {
         static let cameraWarnings = "cameraWarnings"
         static let carPlayAppearance = "carPlayAppearance"
         static let mapSource = "mapSource"
+        static let mapPerspective = "mapPerspective"
+        static let vehicleScale = "vehicleScale"
     }
 
     static var defaults: UserDefaults { .standard }
