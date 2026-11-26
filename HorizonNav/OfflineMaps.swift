@@ -102,9 +102,10 @@ final class OfflineMapStore: ObservableObject {
         }
     }
 
-    /// Saves the tiles along a route's line from zoom 8 to 14, in both styles.
-    func downloadRoute(name: String, coordinates: [CLLocationCoordinate2D]) {
-        guard coordinates.count > 1 else { return }
+    /// Saves the tiles along a route's line from zoom 8 to 14, in both styles. Returns the new area's id, to follow its progress.
+    @discardableResult
+    func downloadRoute(name: String, coordinates: [CLLocationCoordinate2D]) -> String? {
+        guard coordinates.count > 1 else { return nil }
         var coords = coordinates
         let line = MLNPolylineFeature(coordinates: &coords, count: UInt(coords.count))
         let id = UUID().uuidString
@@ -112,6 +113,7 @@ final class OfflineMapStore: ObservableObject {
             let region = MLNShapeOfflineRegion(styleURL: url, shape: line, fromZoomLevel: 8, toZoomLevel: Self.maximumZoom)
             add(region, Context(area: id, name: name, style: style))
         }
+        return id
     }
 
     private func add(_ region: MLNOfflineRegion & NSObjectProtocol, _ context: Context) {

@@ -11,11 +11,17 @@ struct TomTomRoutingProvider: RoutingProvider {
 
     func routes(for request: RouteRequest) async throws -> [RouteOption] {
         var last: Error = ProviderError.noRoute(provider: name)
-        for url in Self.attemptURLs(for: request, key: key) {
+        let body = Self.avoidBody(for: request)
+        var urls = Self.attemptURLs(for: request, key: key)
+        // Should TomTom refuse the restriction sections, the same request without them still gets lanes and limits.
+        if let first = urls.first { urls.insert(Self.removingRestrictions(first), at: 1) }
+        for (attempt, url) in urls.enumerated() {
             do {
-                let data = try await ProviderHTTP.data(url, provider: name, timeout: request.wantsAlternatives ? 25 : 12)
-                let routes = try Self.parse(data)
+                let data = try await ProviderHTTP.data(url, provider: name, timeout: request.wantsAlternatives ? 25 : 12, body: body)
+                var routes = try Self.parse(data)
                 guard !routes.isEmpty else { throw ProviderError.noRoute(provider: name) }
+                // Only the first variant asks for toll sections: without them, no toll stretches does not mean no tolls.
+                if attempt > 0 { for i in routes.indices { routes[i].tollsKnown = false } }
                 return routes
             } catch let error as ProviderError {
                 last = error
@@ -31,12 +37,13 @@ struct TomTomRoutingProvider: RoutingProvider {
 
     /// The request variants Android tries in turn: with lanes and speed limits first, dropping extras when refused.
     static func attemptURLs(for request: RouteRequest, key: String) -> [URL] {
-        let from = request.origin, to = request.destination.placemark.coordinate
-        let locations = String(format: "%.6f,%.6f:%.6f,%.6f", from.latitude, from.longitude, to.latitude, to.longitude)
+        // Stops go between the two ends, joined by colons (Android `TomTomRest.routesWith`).
+        let points = [request.origin] + request.via + [request.destination.placemark.coordinate]
+        let locations = points.map { String(format: "%.6f,%.6f", $0.latitude, $0.longitude) }.joined(separator: ":")
         var components = URLComponents(string: "\(routingBase)/\(locations)/json")!
         var base = [
             URLQueryItem(name: "key", value: key),
-            URLQueryItem(name: "maxAlternatives", value: request.wantsAlternatives ? "2" : "0"),
+            URLQueryItem(name: "maxAlternatives", value: request.wantsAlternatives && request.via.isEmpty ? "2" : "0"),
             URLQueryItem(name: "traffic", value: "true"),
             URLQueryItem(name: "routeRepresentation", value: "polyline"),
             URLQueryItem(name: "instructionsType", value: "text"),
@@ -47,8 +54,10 @@ struct TomTomRoutingProvider: RoutingProvider {
         let traffic = URLQueryItem(name: "sectionType", value: "traffic")
         let lanes = URLQueryItem(name: "sectionType", value: "lanes")
         let limits = URLQueryItem(name: "sectionType", value: "speedLimit")
+        // Tolls, vignettes and low-emission zones, for the route preview and the quicker route offer.
+        let restrictions = restrictionSections.map { URLQueryItem(name: "sectionType", value: $0) }
         let variants: [[URLQueryItem]] = [
-            base + [language, traffic, lanes, limits],
+            base + [language, traffic, lanes, limits] + restrictions,
             base + [language, traffic, lanes],
             base + [traffic, lanes],
             base + [traffic],
@@ -58,6 +67,24 @@ struct TomTomRoutingProvider: RoutingProvider {
             components.queryItems = items
             return components.url
         }
+    }
+
+    static let restrictionSections = ["tollRoad", "tollVignette", "lowEmissionZone"]
+
+    static func removingRestrictions(_ url: URL) -> URL {
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return url }
+        components.queryItems = components.queryItems?.filter { !($0.name == "sectionType" && restrictionSections.contains($0.value ?? "")) }
+        return components.url ?? url
+    }
+
+    /// Roads to avoid as small boxes round each point, sent in a POST body (TomTom `avoidAreas`). Nil when there are none.
+    static func avoidBody(for request: RouteRequest) -> Data? {
+        guard !request.avoid.isEmpty else { return nil }
+        let rectangles = request.avoid.prefix(10).map { road -> [String: Any] in
+            ["southWestCorner": ["latitude": road.south, "longitude": road.west],
+             "northEastCorner": ["latitude": road.north, "longitude": road.east]]
+        }
+        return try? JSONSerialization.data(withJSONObject: ["avoidAreas": ["rectangles": rectangles]])
     }
 
     /// TomTom has no Japanese or Urdu guidance, and Traditional Chinese is Taiwan's (Android `TomTomRest.routesWith`).
@@ -118,6 +145,9 @@ struct TomTomRoutingProvider: RoutingProvider {
 
         var lanes: [LaneSection] = []
         var limits: [SpeedLimitSection] = []
+        var tolls: [RouteSection] = []
+        var vignettes: [RouteSection] = []
+        var zones: [RouteSection] = []
         var delayTotal = 0.0
         let lastIndex = points.count - 1
         for section in r.array("sections") {
@@ -136,16 +166,26 @@ struct TomTomRoutingProvider: RoutingProvider {
                 if kmh > 0, kmh <= 200, b > a { limits.append(SpeedLimitSection(start: cumulative[a], end: cumulative[b], metersPerSecond: kmh / 3.6)) }
             case "TRAFFIC":
                 delayTotal += section.double("delayInSeconds") ?? 0
+            case "TOLLROAD":
+                tolls.append(RouteSection(start: cumulative[a], end: cumulative[b]))
+            case "TOLLVIGNETTE":
+                vignettes.append(RouteSection(start: cumulative[a], end: cumulative[b], country: section.string("countryCode")))
+            case "LOWEMISSIONZONE":
+                zones.append(RouteSection(start: cumulative[a], end: cumulative[b]))
             default:
                 break
             }
         }
         let summary = r.dict("summary") ?? [:]
         let length = summary.double("lengthInMeters").flatMap { $0 > 0 ? $0 : nil } ?? total
-        return RouteOption(name: "", distance: length, expectedTravelTime: summary.double("travelTimeInSeconds") ?? 0,
-                           coordinates: points, steps: steps, advisories: [], source: .online("TomTom"),
-                           trafficDelay: summary.double("trafficDelayInSeconds") ?? delayTotal,
-                           laneSections: lanes, speedLimits: limits.sorted { $0.start < $1.start })
+        var route = RouteOption(name: "", distance: length, expectedTravelTime: summary.double("travelTimeInSeconds") ?? 0,
+                                coordinates: points, steps: steps, advisories: [], source: .online("TomTom"),
+                                trafficDelay: summary.double("trafficDelayInSeconds") ?? delayTotal,
+                                laneSections: lanes, speedLimits: limits.sorted { $0.start < $1.start },
+                                tollSections: tolls, tollsKnown: true)
+        route.vignetteSections = vignettes
+        route.lowEmissionSections = zones
+        return route
     }
 }
 
@@ -187,7 +227,10 @@ struct TomTomSearchProvider: PlaceSearchProvider {
             let poiName = poi?.string("name") ?? ""
             let name = !poiName.isEmpty ? poiName : (free.isEmpty ? query : free)
             let sub = poi != nil ? free : (address?.string("country") ?? "")
-            out = PlaceMerge.merge(out, [FoundPlace(name: name, subtitle: sub, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon))])
+            let place = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            // The entrance to drive to, when TomTom knows it (Android `TomTomRest.geocode`).
+            let entrance = PlaceEntrance.tomtom(x.array("entryPoints"), place: place)
+            out = PlaceMerge.merge(out, [FoundPlace(name: name, subtitle: sub, coordinate: entrance ?? place, building: entrance.map { _ in place })])
         }
         return out
     }

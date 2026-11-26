@@ -31,6 +31,11 @@ struct StoredRoute: Codable, Equatable {
     var trafficDelay: Double
     var laneSections: [LaneSection]
     var speedLimits: [SpeedLimitSection]
+    /// Optional, so trips saved by earlier versions still load.
+    var tollSections: [RouteSection]?
+    var tollsKnown: Bool?
+    var vignetteSections: [RouteSection]?
+    var lowEmissionSections: [RouteSection]?
 
     init(_ route: RouteOption) {
         name = route.name
@@ -42,13 +47,21 @@ struct StoredRoute: Codable, Equatable {
         trafficDelay = route.trafficDelay
         laneSections = route.laneSections
         speedLimits = route.speedLimits
+        tollSections = route.tollSections
+        tollsKnown = route.tollsKnown
+        vignetteSections = route.vignetteSections
+        lowEmissionSections = route.lowEmissionSections
     }
 
     func option(source: RouteSource) -> RouteOption {
-        RouteOption(name: name, distance: distance, expectedTravelTime: expectedTravelTime,
-                    coordinates: coordinates.compactMap { $0.count == 2 ? CLLocationCoordinate2D(latitude: $0[0], longitude: $0[1]) : nil },
-                    steps: steps, advisories: advisories, source: source, trafficDelay: trafficDelay,
-                    laneSections: laneSections, speedLimits: speedLimits)
+        var route = RouteOption(name: name, distance: distance, expectedTravelTime: expectedTravelTime,
+                                coordinates: coordinates.compactMap { $0.count == 2 ? CLLocationCoordinate2D(latitude: $0[0], longitude: $0[1]) : nil },
+                                steps: steps, advisories: advisories, source: source, trafficDelay: trafficDelay,
+                                laneSections: laneSections, speedLimits: speedLimits,
+                                tollSections: tollSections ?? [], tollsKnown: tollsKnown ?? false)
+        route.vignetteSections = vignetteSections ?? []
+        route.lowEmissionSections = lowEmissionSections ?? []
+        return route
     }
 }
 
@@ -120,8 +133,15 @@ extension RouteOption {
         }
         let lanes = laneSections.filter { $0.end > progress }.map { LaneSection(start: max($0.start - progress, 0), end: $0.end - progress, lanes: $0.lanes) }
         let limits = speedLimits.filter { $0.end > progress }.map { SpeedLimitSection(start: max($0.start - progress, 0), end: $0.end - progress, metersPerSecond: $0.metersPerSecond) }
-        return RouteOption(name: name, distance: distance * remaining, expectedTravelTime: expectedTravelTime * remaining,
-                           coordinates: points, steps: steps, advisories: advisories, source: source,
-                           trafficDelay: 0, laneSections: lanes, speedLimits: limits)
+        func rest(_ sections: [RouteSection]) -> [RouteSection] {
+            sections.filter { $0.end > progress }.map { RouteSection(start: max($0.start - progress, 0), end: $0.end - progress, country: $0.country) }
+        }
+        var route = RouteOption(name: name, distance: distance * remaining, expectedTravelTime: expectedTravelTime * remaining,
+                                coordinates: points, steps: steps, advisories: advisories, source: source,
+                                trafficDelay: 0, laneSections: lanes, speedLimits: limits,
+                                tollSections: rest(tollSections), tollsKnown: tollsKnown)
+        route.vignetteSections = rest(vignetteSections)
+        route.lowEmissionSections = rest(lowEmissionSections)
+        return route
     }
 }

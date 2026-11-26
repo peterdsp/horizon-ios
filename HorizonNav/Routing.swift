@@ -47,6 +47,14 @@ struct RouteOption: Identifiable, Equatable {
     var laneSections: [LaneSection] = []
     /// Posted speed limits along the route, by distance along the geometry.
     var speedLimits: [SpeedLimitSection] = []
+    /// Toll stretches, by distance along the geometry. Only meaningful when `tollsKnown`.
+    var tollSections: [RouteSection] = []
+    /// Whether the provider said where (or whether) the route pays tolls. Apple Maps only says whether it does.
+    var tollsKnown = false
+    /// Motorway stretches that need a vignette, with the country (TomTom only).
+    var vignetteSections: [RouteSection] = []
+    /// Stretches inside a low-emission zone (TomTom only).
+    var lowEmissionSections: [RouteSection] = []
 
     var length: CLLocationDistance { cumulative.last ?? 0 }
 
@@ -54,8 +62,11 @@ struct RouteOption: Identifiable, Equatable {
 
     init(name: String, distance: CLLocationDistance, expectedTravelTime: TimeInterval,
          coordinates: [CLLocationCoordinate2D], steps: [RouteStep], advisories: [String], source: RouteSource,
-         trafficDelay: TimeInterval = 0, laneSections: [LaneSection] = [], speedLimits: [SpeedLimitSection] = []) {
+         trafficDelay: TimeInterval = 0, laneSections: [LaneSection] = [], speedLimits: [SpeedLimitSection] = [],
+         tollSections: [RouteSection] = [], tollsKnown: Bool = false) {
         self.trafficDelay = trafficDelay
+        self.tollSections = tollSections
+        self.tollsKnown = tollsKnown
         self.laneSections = laneSections
         self.speedLimits = speedLimits
         self.name = name
@@ -69,11 +80,23 @@ struct RouteOption: Identifiable, Equatable {
     }
 }
 
+/// A stretch from `start` to `end` metres along a route: a toll road, a vignette motorway (with its country) or a zone.
+struct RouteSection: Equatable, Codable {
+    var start: CLLocationDistance
+    var end: CLLocationDistance
+    /// ISO country code, for vignette stretches.
+    var country = ""
+}
+
 struct RouteRequest {
     var origin: CLLocationCoordinate2D
     var destination: MKMapItem
     var heading: CLLocationDirection?
     var wantsAlternatives = true
+    /// Stops on the way, in order. TomTom, Mapbox and the offline router take them in one request; Apple Maps plans leg by leg.
+    var via: [CLLocationCoordinate2D] = []
+    /// Roads the driver asked to avoid for this trip. Apple Maps cannot avoid a road, so callers check the result.
+    var avoid: [AvoidedRoad] = []
 }
 
 /// The injectable routing boundary. Online it is TomTom, Mapbox or Apple Maps; offline it is the on-device
@@ -100,6 +123,18 @@ struct MapKitRoutingProvider: RoutingProvider {
     let name = "Apple Maps"
 
     func routes(for request: RouteRequest) async throws -> [RouteOption] {
+        // Apple Maps takes no stops: each leg is planned on its own and the legs are joined.
+        if !request.via.isEmpty {
+            let ends = [request.origin] + request.via
+            let targets = request.via.map { MKMapItem(placemark: MKPlacemark(coordinate: $0)) } + [request.destination]
+            var legs: [RouteOption] = []
+            for (i, target) in targets.enumerated() {
+                let leg = RouteRequest(origin: ends[i], destination: target, heading: i == 0 ? request.heading : nil, wantsAlternatives: false)
+                guard let first = try await routes(for: leg).first else { throw RoutingError.noRoute }
+                legs.append(first)
+            }
+            return RouteLegs.join(legs).map { [$0] } ?? []
+        }
         let directions = MKDirections.Request()
         directions.source = MKMapItem(placemark: MKPlacemark(coordinate: request.origin))
         directions.destination = request.destination
@@ -137,8 +172,10 @@ struct MapKitRoutingProvider: RoutingProvider {
                 isArrival: i == route.steps.count - 1
             ))
         }
+        // Apple Maps says whether a route pays tolls, not where: a toll route counts as tolls all the way.
         return RouteOption(name: route.name, distance: route.distance, expectedTravelTime: route.expectedTravelTime,
-                           coordinates: coordinates, steps: steps, advisories: route.advisoryNotices, source: source)
+                           coordinates: coordinates, steps: steps, advisories: route.advisoryNotices, source: source,
+                           tollSections: route.hasTolls ? [RouteSection(start: 0, end: cumulative.last ?? 0)] : [], tollsKnown: true)
     }
 }
 

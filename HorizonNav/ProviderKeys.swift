@@ -69,6 +69,9 @@ enum AppSettings {
         static let cameraWarnings = "cameraWarnings"
         static let carPlayAppearance = "carPlayAppearance"
         static let mapSource = "mapSource"
+        static let fasterRoutes = "fasterRoutes"
+        static let speakLimitDrops = "speakLimitDrops"
+        static let parkingPrompt = "parkingPrompt"
     }
 
     static var defaults: UserDefaults { .standard }
@@ -83,4 +86,10 @@ enum AppSettings {
     static var carPlayAppearance: String { defaults.string(forKey: Keys.carPlayAppearance) ?? "car" }
     /// "apple" or "openstreetmap".
     static var mapSource: String { defaults.string(forKey: Keys.mapSource) ?? "apple" }
+    /// Offer a quicker route found while driving (Android `FASTER_ROUTE`, on by default).
+    static var fasterRoutes: Bool { defaults.object(forKey: Keys.fasterRoutes) as? Bool ?? true }
+    /// Speak a lower limit before it starts (off by default; the sign always shows it).
+    static var speakLimitDrops: Bool { defaults.object(forKey: Keys.speakLimitDrops) as? Bool ?? false }
+    /// Offer car parks near the destination (Android `parkprompt`, on by default).
+    static var parkingPrompt: Bool { defaults.object(forKey: Keys.parkingPrompt) as? Bool ?? true }
 }

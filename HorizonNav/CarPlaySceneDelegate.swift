@@ -57,6 +57,13 @@ final class CarPlaySceneDelegate: NSObject, CPTemplateApplicationSceneDelegate {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.applyAppearance() }
             .store(in: &cancellables)
+        // The view and overview buttons show what the map is doing, however it was changed.
+        mapViewController.guidanceMap.$viewMode.map { _ in () }
+            .merge(with: mapViewController.guidanceMap.$overview.map { $0 != nil }.removeDuplicates().map { _ in () })
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] in self?.updateBarButtons() }
+            .store(in: &cancellables)
 
         // A trip already running on the phone continues on the car screen.
         if store.phase == .guiding, let route = store.selectedRoute { beginSession(for: makeTrip(), route: route) }
@@ -100,9 +107,23 @@ final class CarPlaySceneDelegate: NSObject, CPTemplateApplicationSceneDelegate {
         if navigating {
             let end = CPBarButton(title: String(localized: "End")) { [weak self] _ in self?.store.stopNavigating() }
             mapTemplate.leadingNavigationBarButtons = [end]
+            let stops = CPBarButton(title: String(localized: "Stops")) { [weak self] _ in self?.showStopCategories() }
+            // CarPlay takes two buttons a side, so Stops sits by End.
+            mapTemplate.leadingNavigationBarButtons = [end, stops]
+            // The map buttons are full at four, so the view switch and the overview sit in the bar.
+            if let guidanceMap = mapViewController?.guidanceMap {
+                let view = CPBarButton(image: UIImage(systemName: guidanceMap.viewMode.symbolName)!) { [weak self] _ in
+                    self?.mapViewController?.guidanceMap.cycleViewMode()
+                }
+                let overview = CPBarButton(image: UIImage(systemName: guidanceMap.showsOverview ? "location.fill" : "point.bottomleft.forward.to.point.topright.scurvepath")!) { [weak self] _ in
+                    self?.mapViewController?.guidanceMap.toggleOverview()
+                }
+                mapTemplate.trailingNavigationBarButtons = [view, overview]
+            }
         } else {
             let search = CPBarButton(image: UIImage(systemName: "magnifyingglass")!) { [weak self] _ in self?.showSearch() }
             mapTemplate.leadingNavigationBarButtons = [search]
+            mapTemplate.trailingNavigationBarButtons = []
         }
         let recenter = CPMapButton { [weak self] _ in self?.mapViewController?.recenter() }
         recenter.image = UIImage(systemName: "location.fill")
@@ -127,6 +148,8 @@ final class CarPlaySceneDelegate: NSObject, CPTemplateApplicationSceneDelegate {
     /// Plans routes and shows them as a trip preview, one route choice per alternative.
     private func preview(destination: MKMapItem) {
         Task { @MainActor in
+            // In the car, routes always start where the car is.
+            store.setOrigin(nil)
             await store.navigate(to: destination)
             guard store.phase == .previewing, let mapTemplate else {
                 log.error("No route to preview")
@@ -149,8 +172,13 @@ final class CarPlaySceneDelegate: NSObject, CPTemplateApplicationSceneDelegate {
             let time = Self.format(duration: option.expectedTravelTime)
             let distance = Self.format(distance: option.distance)
             let summary = option.name.isEmpty ? distance : "\(option.name), \(distance)"
+            // Vignette motorways and low-emission zones, when the route's service reports them.
+            var notes = option.advisories
+            let vignettes = RouteRestrictions.vignetteCountries(option)
+            if !vignettes.isEmpty { notes.append(RouteRestrictions.vignetteText(vignettes)) }
+            if RouteRestrictions.entersLowEmissionZone(option) { notes.append(String(localized: "Enters a low-emission zone")) }
             let choice = CPRouteChoice(summaryVariants: [summary, distance],
-                                       additionalInformationVariants: option.advisories.isEmpty ? [time] : [time] + option.advisories,
+                                       additionalInformationVariants: notes.isEmpty ? [time] : [time] + notes,
                                        selectionSummaryVariants: [time])
             choice.userInfo = index
             return choice
@@ -204,7 +232,88 @@ final class CarPlaySceneDelegate: NSObject, CPTemplateApplicationSceneDelegate {
             endSession(arrived: false)
         case .alert(let alert):
             present(alert)
+        case .fasterRouteOffered(let offer):
+            presentFasterRoute(offer)
+        case .parkingFound(let spots):
+            presentParking(spots)
         }
+    }
+
+    /// The quicker route as an alert with Switch and Keep, gone after 25 seconds like the phone's card (Android `FasterCard`).
+    private func presentFasterRoute(_ offer: NavigationStore.FasterRouteOffer) {
+        guard let mapTemplate else { return }
+        let take = CPAlertAction(title: String(localized: "Switch"), style: .default) { [weak self] _ in
+            self?.store.acceptFasterRoute()
+            self?.mapTemplate?.dismissNavigationAlert(animated: true) { _ in }
+        }
+        let keep = CPAlertAction(title: String(localized: "Keep"), style: .cancel) { [weak self] _ in
+            self?.store.dismissFasterRoute()
+            self?.mapTemplate?.dismissNavigationAlert(animated: true) { _ in }
+        }
+        let alert = CPNavigationAlert(titleVariants: [String(localized: "Faster route found")], subtitleVariants: [offer.summary],
+                                      image: UIImage(systemName: "arrow.triangle.branch"), primaryAction: take, secondaryAction: keep,
+                                      duration: FasterRoutePolicy.offerDuration)
+        mapTemplate.dismissNavigationAlert(animated: false) { _ in mapTemplate.present(navigationAlert: alert, animated: true) }
+        log.info("Quicker route offered on the car screen")
+    }
+
+    /// The nearest car park to the destination, with Go to drive there instead.
+    private func presentParking(_ spots: [ParkingSpot]) {
+        guard let mapTemplate, let spot = spots.first else { return }
+        let go = CPAlertAction(title: String(localized: "Go"), style: .default) { [weak self] _ in
+            Task { @MainActor in await self?.store.park(at: spot) }
+            self?.mapTemplate?.dismissNavigationAlert(animated: true) { _ in }
+        }
+        let later = CPAlertAction(title: String(localized: "Not now"), style: .cancel) { [weak self] _ in
+            self?.mapTemplate?.dismissNavigationAlert(animated: true) { _ in }
+        }
+        let detail = String(localized: "\(spot.name) · \(spot.walkMinutes) min walk")
+        let alert = CPNavigationAlert(titleVariants: [String(localized: "Parking near your destination")], subtitleVariants: [detail],
+                                      image: UIImage(systemName: "parkingsign"), primaryAction: go, secondaryAction: later, duration: 15)
+        mapTemplate.dismissNavigationAlert(animated: false) { _ in mapTemplate.present(navigationAlert: alert, animated: true) }
+    }
+
+    // MARK: Stops along the route
+
+    /// The stop categories, then the places ahead with their detour, as on the phone (Android Auto `NearbyScreen`).
+    private func showStopCategories() {
+        let items = StopKind.allCases.map { kind -> CPListItem in
+            let item = CPListItem(text: kind.title, detailText: nil, image: UIImage(systemName: kind.symbol))
+            item.handler = { [weak self] _, done in
+                self?.showStops(kind)
+                done()
+            }
+            return item
+        }
+        let template = CPListTemplate(title: String(localized: "Stops along the route"), sections: [CPListSection(items: items)])
+        interfaceController?.pushTemplate(template, animated: true, completion: nil)
+    }
+
+    private func showStops(_ kind: StopKind) {
+        guard let route = store.selectedRoute else { return }
+        let template = CPListTemplate(title: kind.title, sections: [])
+        template.emptyViewTitleVariants = [String(localized: "Searching along the route")]
+        interfaceController?.pushTemplate(template, animated: true, completion: nil)
+        let progress = store.guidance?.progress ?? 0
+        Task { @MainActor in
+            let found = await RouteStopSearch.find(kind, along: route, progress: progress)
+            template.emptyViewTitleVariants = [found == nil ? String(localized: "The place search did not answer") : String(localized: "Nothing found ahead")]
+            let items = (found ?? []).prefix(12).map { stop -> CPListItem in
+                let item = CPListItem(text: stop.name, detailText: Self.stopDetail(stop))
+                item.handler = { [weak self] _, done in
+                    Task { @MainActor in await self?.store.addStop(stop.mapItem) }
+                    self?.interfaceController?.popToRootTemplate(animated: true, completion: nil)
+                    done()
+                }
+                return item
+            }
+            template.updateSections([CPListSection(items: Array(items))])
+        }
+    }
+
+    /// "2.1 km ahead · +3 min".
+    static func stopDetail(_ stop: RouteStop) -> String {
+        String(localized: "\(format(distance: stop.distanceAhead)) ahead · +\(stop.detourMinutes) min")
     }
 
     /// A warning as a CarPlay navigation alert (Android raises its own alert card on the car screen).

@@ -9,7 +9,7 @@ struct FeatureSheet: View {
         var id: String { rawValue }
     }
 
-    static let featureRevision = 3
+    static let featureRevision = 4
     private static let seenKey = "featureSheetRevisionSeen"
 
     /// The guide on first launch, what's new after an update with new features, otherwise nothing.
@@ -53,12 +53,38 @@ struct FeatureSheet: View {
                  detail: "Turns are announced before each junction, with the lane to be in. Use the speaker button to mute, or Settings for alerts only."),
             Item(symbol: "road.lanes", title: "Lanes, speed limits and cameras",
                  detail: "The lanes to use, the speed limit and your speed show on the phone and in CarPlay, and speed cameras ahead are warned about. CarPlay follows the car's day and night look, or your choice in Settings."),
+            Item(symbol: "view.3d", title: "Map views and route overview",
+                 detail: "While driving, the map zooms with your speed and the next turn. Tap the view button to switch between the tilted view, heading up and north up. Tap the route button to see the rest of the route with the arrival time and traffic delay, and tap it again to follow the car. In CarPlay both buttons are at the top of the map. Settings has Zoom while driving (Closer, Default or Wider) and 3D buildings."),
+            Item(symbol: "signpost.right", title: "Junctions on the map",
+                 detail: "Traffic lights, level crossings and stop signs on your route show on the map as you drive, from OpenStreetMap, and a sign with the lanes to use stands at the next junction."),
+            Item(symbol: "play.circle", title: "Preview a junction",
+                 detail: "Before you start, tap Preview a junction and pick a turn or exit to watch a short drive through it, with the instruction and the lanes."),
+        ]
+        // This revision's features: last in the guide, first in what's new.
+        let latest = [
+            Item(symbol: "mappin.and.ellipse", title: "Plan from anywhere",
+                 detail: "Tap From under Where to? and search for a starting point to look at a route ahead of time. Tap the location button to start from where you are again."),
+            Item(symbol: "fuelpump.fill", title: "Stops along the route",
+                 detail: "Tap Stops for fuel, charging, coffee, food, services or toilets ahead on your route, each with the extra time it adds. Tap Add stop and the route goes through it. In CarPlay, tap Stops while driving."),
+            Item(symbol: "nosign", title: "Avoid a road",
+                 detail: "Tap Avoid a road and pick a road or exit on the route. The route is planned again without it for this trip, and Undo puts it back. This needs a TomTom or Mapbox key, or a routing pack with no signal."),
+            Item(symbol: "arrow.triangle.branch", title: "Quicker routes on the way",
+                 detail: "When a quicker route turns up while you drive, it is offered with what changes: minutes saved, the extra or shorter distance and toll roads. Tap Switch or Keep, on the phone or in CarPlay."),
+            Item(symbol: "speedometer", title: "Lower speed limits ahead",
+                 detail: "A lower limit coming up shows under your speed with how far it is, for example 50 in 250 m. Settings can speak it too."),
+            Item(symbol: "parkingsign", title: "Entrances and parking",
+                 detail: "Where TomTom or Mapbox know a place's entrance, the route goes to it and the map marks it, and the side of the street is shown as you arrive. Car parks near the destination are offered as you get close."),
+            Item(symbol: "arrow.down.to.line.circle", title: "Offline from the route preview",
+                 detail: "Tap Download for offline in the route preview to save the map along the route. The preview says whether a routing pack covers the trip and offers the one you need."),
+            Item(symbol: "ticket", title: "Vignettes and low-emission zones",
+                 detail: "With a TomTom key, routes that need a motorway vignette or enter a low-emission zone are flagged in the preview and drawn in orange, with links to the rules."),
         ]
         if kind == .guide {
             list.insert(Item(symbol: "magnifyingglass", title: "Search anywhere",
                              detail: "Type a place or address in Where to? at the bottom of the map."), at: 0)
+            return list + latest
         }
-        return list
+        return latest + list
     }
 
     var body: some View {

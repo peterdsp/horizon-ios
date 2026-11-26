@@ -47,6 +47,16 @@ The service is chosen the way the Android app chooses: Settings > Routes from (A
 - `CarPlaySceneDelegate.swift`, `CarPlayManeuvers.swift` and `CarPlayMapViewController.swift`: CarPlay search, trip previews with one route choice per alternative, `CPNavigationSession` manoeuvres and estimates, and pause for rerouting.
 - Debug builds accept `-HNCarPlayAutoTest "<query>"`, which runs search, preview, alternative selection and trip start once the CarPlay scene connects.
 
+## Map while driving
+
+Ported from the Android app's camera and map extras (`NavigationPolicy.routeSpeedZoom`, `NavEngine.autoZoom`, `Overpass.routeFeatures`, `RouteExtras.hazards`, `MapBinding.setLaneSign`), on the phone and in CarPlay:
+
+- `NavigationCamera.swift`, `GuidanceMap.swift`: the guiding camera zooms with speed, road and the next manoeuvre, with Settings > Map > Zoom while driving (Closer, Default or Wider, half a zoom level each way). One button cycles the tilted view, heading up and north up, and another shows the rest of the route with the arrival time and the traffic delay the route reported; tap again to follow the car. In CarPlay both buttons are in the bar at the top of the map, since the four map buttons are taken.
+- 3D buildings (Settings > Map): realistic elevation on Apple Maps, and on the OpenStreetMap map the day style's extruded buildings, with extruded buildings added to the night style, which has none.
+- `RoadFeatures.swift`: traffic lights, level crossings and stop signs along the route from OpenStreetMap (Overpass), looked up 10 km at a time ahead of the car; a stop sign only when it is for the route's road. One-way arrows come from the OpenStreetMap map style. This needs a connection.
+- The lanes to use stand as a sign at the next junction. The providers give each lane's arrows but not where the lane runs, so lanes are not painted on the road itself.
+- `JunctionPreview.swift`: in the route preview, Preview a junction plays a short drive through a chosen manoeuvre, with its instruction and lanes (phone only).
+
 ## Offline
 
 Offline maps are under the download button on the map.

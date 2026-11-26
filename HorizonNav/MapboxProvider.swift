@@ -37,19 +37,28 @@ struct MapboxRoutingProvider: RoutingProvider {
     }
 
     static func attemptURLs(for request: RouteRequest, token: String) -> [URL] {
-        let from = request.origin, to = request.destination.placemark.coordinate
-        let coords = String(format: "%.6f,%.6f;%.6f,%.6f", from.longitude, from.latitude, to.longitude, to.latitude)
+        let points = [request.origin] + request.via + [request.destination.placemark.coordinate]
+        let coords = points.map { String(format: "%.6f,%.6f", $0.longitude, $0.latitude) }.joined(separator: ";")
         var components = URLComponents(string: "https://api.mapbox.com/directions/v5/mapbox/driving-traffic/\(coords)")!
+        // No alternatives once the trip has a stop (Android `MapboxRest.routesWith`).
+        let alternatives = request.wantsAlternatives && request.via.isEmpty
         var items = [
             URLQueryItem(name: "geometries", value: "geojson"), URLQueryItem(name: "overview", value: "full"),
             URLQueryItem(name: "steps", value: "true"), URLQueryItem(name: "banner_instructions", value: "true"),
             URLQueryItem(name: "annotations", value: "maxspeed,congestion,duration,distance,freeflow_speed"),
             URLQueryItem(name: "language", value: languageCode),
-            URLQueryItem(name: "alternatives", value: request.wantsAlternatives ? "true" : "false"),
+            URLQueryItem(name: "alternatives", value: alternatives ? "true" : "false"),
             URLQueryItem(name: "access_token", value: token),
         ]
         // The way the car faces, so a reroute does not send it the wrong way down the road it is on.
-        if let heading = request.heading { items.append(URLQueryItem(name: "bearings", value: "\(Int(heading) % 360),45;")) }
+        if let heading = request.heading {
+            items.append(URLQueryItem(name: "bearings", value: "\(Int(heading) % 360),45" + String(repeating: ";", count: points.count - 1)))
+        }
+        // Roads the driver asked to avoid, as excluded points (Mapbox allows up to 50).
+        if !request.avoid.isEmpty {
+            let excluded = request.avoid.prefix(50).map { String(format: "point(%.6f %.6f)", $0.point.longitude, $0.point.latitude) }
+            items.append(URLQueryItem(name: "exclude", value: excluded.joined(separator: ",")))
+        }
         components.queryItems = items
         let full = components.url!
         // The same without the free-flow speeds, should Mapbox refuse them: the route matters more than the delay.
@@ -121,6 +130,7 @@ struct MapboxRoutingProvider: RoutingProvider {
         var steps: [RouteStep] = []
         var lanes: [LaneSection] = []
         var limits: [SpeedLimitSection] = []
+        var tolls: [RouteSection] = []
         var legStart = 0.0
         var legPointStart = 0
         let legs = r.array("legs")
@@ -173,6 +183,11 @@ struct MapboxRoutingProvider: RoutingProvider {
                         }
                     }
                 }
+                // A step whose roads are marked "toll" at any junction is counted as a toll stretch (Android `MapboxRest.tollIn`).
+                if s.array("intersections").contains(where: { ($0["classes"] as? [String])?.contains("toll") == true }) {
+                    let end = (offset + (s.double("distance") ?? 0)) * k
+                    if let last = tolls.last, abs(last.end - at) < 1 { tolls[tolls.count - 1].end = end } else { tolls.append(RouteSection(start: at, end: end)) }
+                }
                 previousOffset = offset
                 offset += s.double("distance") ?? 0
             }
@@ -199,7 +214,7 @@ struct MapboxRoutingProvider: RoutingProvider {
         let summary = legs.compactMap { $0["summary"] as? String }.first { !$0.isEmpty } ?? ""
         return RouteOption(name: summary, distance: apiLength, expectedTravelTime: time, coordinates: points, steps: steps,
                            advisories: [], source: .online("Mapbox"), trafficDelay: max(0, time - typical),
-                           laneSections: lanes, speedLimits: limits)
+                           laneSections: lanes, speedLimits: limits, tollSections: tolls, tollsKnown: true)
     }
 }
 
@@ -249,7 +264,10 @@ struct MapboxSearchProvider: PlaceSearchProvider {
             if name.isEmpty { name = String(full.split(separator: ",").first ?? "") }
             if name.isEmpty { name = query }
             let sub = !full.isEmpty && full != name && properties.string("feature_type") == "poi" ? full : properties.string("place_formatted")
-            out = PlaceMerge.merge(out, [FoundPlace(name: name, subtitle: sub, coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon))])
+            let place = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            // An address's routable point is its way in from the road (Android `MapboxRest.feature`).
+            let entrance = properties.string("feature_type") == "address" ? PlaceEntrance.mapbox(coords?.array("routable_points") ?? [], place: place) : nil
+            out = PlaceMerge.merge(out, [FoundPlace(name: name, subtitle: sub, coordinate: entrance ?? place, building: entrance.map { _ in place })])
         }
         return out
     }

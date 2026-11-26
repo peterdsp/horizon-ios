@@ -16,6 +16,12 @@ enum SpeedDisplay {
         guard let limit else { return false }
         return value(speed) > value(limit)
     }
+
+    /// "50 in 250 m", the lower limit ahead and how far it is.
+    static func nextText(_ drop: SpeedLimitLookahead.Drop) -> String {
+        let distance = Measurement(value: drop.distance, unit: UnitLength.meters).formatted(.measurement(width: .abbreviated, usage: .road))
+        return String(localized: "\(value(drop.metersPerSecond)) in \(distance)")
+    }
 }
 
 /// The speed sign drawn on the car map: a red-ringed limit sign with the current speed under it.
@@ -23,6 +29,7 @@ final class SpeedSignView: UIView {
     private let ring = UIView()
     private let limitLabel = UILabel()
     private let speedLabel = UILabel()
+    private let nextLabel = UILabel()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -40,9 +47,19 @@ final class SpeedSignView: UIView {
         speedLabel.textColor = .white
         speedLabel.layer.cornerRadius = 8
         speedLabel.clipsToBounds = true
+        nextLabel.font = .monospacedDigitSystemFont(ofSize: 12, weight: .bold)
+        nextLabel.textAlignment = .center
+        nextLabel.textColor = .black
+        nextLabel.backgroundColor = .white
+        nextLabel.layer.borderColor = UIColor.systemRed.cgColor
+        nextLabel.layer.borderWidth = 2
+        nextLabel.layer.cornerRadius = 8
+        nextLabel.clipsToBounds = true
+        nextLabel.adjustsFontSizeToFitWidth = true
         ring.addSubview(limitLabel)
         addSubview(ring)
         addSubview(speedLabel)
+        addSubview(nextLabel)
     }
 
     @available(*, unavailable)
@@ -55,9 +72,13 @@ final class SpeedSignView: UIView {
         ring.layer.cornerRadius = side / 2
         limitLabel.frame = ring.bounds.insetBy(dx: 8, dy: 8)
         speedLabel.frame = CGRect(x: 0, y: side + 6, width: bounds.width, height: 24)
+        nextLabel.frame = CGRect(x: 0, y: side + 34, width: bounds.width, height: 20)
     }
 
-    func update(limit: Double?, speed: Double) {
+    /// The current limit stays on the sign until the change point; the lower one ahead shows under the speed.
+    func update(limit: Double?, speed: Double, next: SpeedLimitLookahead.Drop? = nil) {
+        nextLabel.isHidden = next == nil
+        nextLabel.text = next.map(SpeedDisplay.nextText)
         ring.isHidden = limit == nil
         limitLabel.text = limit.map { "\(SpeedDisplay.value($0))" }
         speedLabel.text = "\(SpeedDisplay.value(speed)) \(SpeedDisplay.unitLabel)"
@@ -69,6 +90,7 @@ final class SpeedSignView: UIView {
 struct SpeedSignBadge: View {
     var limit: Double?
     var speed: Double
+    var next: SpeedLimitLookahead.Drop?
 
     var body: some View {
         VStack(spacing: 6) {
@@ -87,6 +109,16 @@ struct SpeedSignBadge: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(Capsule().fill(SpeedDisplay.isOver(speed: speed, limit: limit) ? Color.red : Color.black.opacity(0.6)))
+            if let next {
+                Text(SpeedDisplay.nextText(next))
+                    .font(.caption.monospacedDigit().weight(.bold))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(.white))
+                    .overlay(Capsule().stroke(.red, lineWidth: 2))
+                    .accessibilityLabel("Speed limit \(SpeedDisplay.value(next.metersPerSecond)) \(SpeedDisplay.unitLabel) ahead")
+            }
         }
     }
 }

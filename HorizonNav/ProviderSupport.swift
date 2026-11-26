@@ -90,13 +90,23 @@ struct FoundPlace: Equatable {
     var name: String
     var subtitle: String
     var coordinate: CLLocationCoordinate2D
+    /// The place itself when `coordinate` is its entrance, the point to drive to.
+    var building: CLLocationCoordinate2D?
 
     static func == (a: FoundPlace, b: FoundPlace) -> Bool {
         a.name == b.name && a.subtitle == b.subtitle && a.coordinate.latitude == b.coordinate.latitude && a.coordinate.longitude == b.coordinate.longitude
     }
 
     var mapItem: MKMapItem {
-        let item = MKMapItem(placemark: MKPlacemark(coordinate: coordinate, addressDictionary: subtitle.isEmpty ? nil : ["Street": subtitle]))
+        let placemark = MKPlacemark(coordinate: coordinate, addressDictionary: subtitle.isEmpty ? nil : ["Street": subtitle])
+        let item: MKMapItem
+        if let building {
+            let entrance = EntrancePlaceItem(placemark: placemark)
+            entrance.building = building
+            item = entrance
+        } else {
+            item = MKMapItem(placemark: placemark)
+        }
         item.name = name
         return item
     }

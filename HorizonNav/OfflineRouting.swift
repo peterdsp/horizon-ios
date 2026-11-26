@@ -16,6 +16,8 @@ struct ValhallaRoutingProvider: RoutingProvider {
         guard let pack = OfflinePackStorage.packFor(origin: request.origin, destination: destination, among: packs()) else {
             throw RoutingError.offlineUnavailable
         }
+        // A stop outside the pack cannot be reached on its roads.
+        if !request.via.allSatisfy({ pack.bounds == nil || pack.contains($0) }) { throw RoutingError.offlineUnavailable }
         let body = Self.requestJSON(for: request, language: Self.language)
         let response = try await Task.detached(priority: .userInitiated) {
             try ValhallaEngines.shared.route(rawRequest: body, pack: pack)
@@ -48,11 +50,15 @@ struct ValhallaRoutingProvider: RoutingProvider {
             origin["heading_tolerance"] = 60
         }
         let destination = request.destination.placemark.coordinate
-        let body: [String: Any] = [
-            "locations": [origin, ["lat": destination.latitude, "lon": destination.longitude]],
+        // Stops are "through" points, so the trip stays one leg (Android `OfflineRouter.routeIn`).
+        let stops: [[String: Any]] = request.via.map { ["lat": $0.latitude, "lon": $0.longitude, "type": "through"] }
+        var body: [String: Any] = [
+            "locations": [origin] + stops + [["lat": destination.latitude, "lon": destination.longitude]],
             "costing": "auto",
             "directions_options": ["units": "kilometers", "language": language],
         ]
+        // Roads the driver asked to avoid, as small excluded polygons (Android `exclude_polygons`).
+        if !request.avoid.isEmpty { body["exclude_polygons"] = request.avoid.map(\.ring) }
         let data = (try? JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])) ?? Data()
         return String(decoding: data, as: UTF8.self)
     }
@@ -101,7 +107,14 @@ struct ValhallaRoutingProvider: RoutingProvider {
         guard points.count >= 2 else { throw RoutingError.noRoute }
         let cumulative = RouteGeometry.cumulativeDistances(points)
         var steps: [RouteStep] = []
+        var tolls: [RouteSection] = []
         for (base, m) in maneuvers {
+            // Valhalla marks each manoeuvre whose road pays a toll.
+            if m.bool("toll") {
+                let a = min(max(base + (m.int("begin_shape_index") ?? 0), 0), points.count - 1)
+                let b = min(max(base + (m.int("end_shape_index") ?? 0), a), points.count - 1)
+                tolls.append(RouteSection(start: cumulative[a], end: cumulative[b]))
+            }
             let exits = m.int("roundabout_exit_count") ?? 0
             guard let maneuver = maneuver(type: m.int("type") ?? 0, roundaboutExits: exits), maneuver != .depart else { continue }
             let index = min(max(base + (m.int("begin_shape_index") ?? 0), 0), points.count - 1)
@@ -118,7 +131,7 @@ struct ValhallaRoutingProvider: RoutingProvider {
         let length = (summary.double("length") ?? 0) * 1000
         return RouteOption(name: packName, distance: length > 0 ? length : cumulative.last ?? 0,
                            expectedTravelTime: summary.double("time") ?? 0, coordinates: points, steps: steps,
-                           advisories: [], source: .offline(String(localized: "Offline map")))
+                           advisories: [], source: .offline(String(localized: "Offline map")), tollSections: tolls, tollsKnown: true)
     }
 }
 

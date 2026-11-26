@@ -11,6 +11,11 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.soundMode) private var soundMode = 0
     @AppStorage(AppSettings.Keys.cameraWarnings) private var cameraWarnings = true
     @AppStorage(AppSettings.Keys.carPlayAppearance) private var carPlayAppearance = "car"
+    @AppStorage(AppSettings.Keys.fasterRoutes) private var fasterRoutes = true
+    @AppStorage(AppSettings.Keys.speakLimitDrops) private var speakLimitDrops = false
+    @AppStorage(AppSettings.Keys.parkingPrompt) private var parkingPrompt = true
+    @AppStorage(AppSettings.Keys.navigationZoom) private var navigationZoom = NavigationZoom.standard.rawValue
+    @AppStorage(AppSettings.Keys.buildings3D) private var buildings3D = true
 
     var body: some View {
         NavigationStack {
@@ -39,10 +44,19 @@ struct SettingsView: View {
                         Text("Off").tag(2)
                     }
                     Toggle("Speed camera warnings", isOn: $cameraWarnings)
+                    Toggle("Speak lower speed limits ahead", isOn: $speakLimitDrops)
                 } header: {
                     Text("Sound")
                 } footer: {
                     Text("Directions are spoken before each turn in the app's language. Music is turned down while a direction plays, and podcasts pause, on the phone and in CarPlay.")
+                }
+                Section {
+                    Toggle("Offer quicker routes", isOn: $fasterRoutes)
+                    Toggle("Parking near your destination", isOn: $parkingPrompt)
+                } header: {
+                    Text("While driving")
+                } footer: {
+                    Text("A quicker route found on the way is offered with what it changes, and car parks from OpenStreetMap are offered as you get close.")
                 }
                 Section {
                     Picker("Day and night", selection: $carPlayAppearance) {
@@ -61,10 +75,14 @@ struct SettingsView: View {
                         Text("Apple Maps").tag("apple")
                         Text("OpenStreetMap").tag("openstreetmap")
                     }
+                    Picker("Zoom while driving", selection: $navigationZoom) {
+                        ForEach(NavigationZoom.allCases, id: \.rawValue) { zoom in Text(zoom.title).tag(zoom.rawValue) }
+                    }
+                    Toggle("3D buildings", isOn: $buildings3D)
                 } header: {
                     Text("Map")
                 } footer: {
-                    Text("Apple Maps shows live traffic. The OpenStreetMap map draws areas saved in Offline maps, and is used automatically when there is no signal.")
+                    Text("Apple Maps shows live traffic. The OpenStreetMap map draws areas saved in Offline maps, and is used automatically when there is no signal. While driving, the map zooms with your speed and the next turn: Closer and Wider move that half a step in or out, on the phone and in CarPlay.")
                 }
             }
             .navigationTitle("Settings")

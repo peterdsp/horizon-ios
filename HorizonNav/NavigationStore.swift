@@ -26,6 +26,17 @@ final class NavigationStore: NSObject, ObservableObject {
         case arrived
         case ended
         case alert(NavigationAlert)
+        /// A quicker route was found while driving; the store holds it in `fasterOffer`.
+        case fasterRouteOffered(FasterRouteOffer)
+        /// Car parks near the destination, offered from 1.7 km out.
+        case parkingFound([ParkingSpot])
+    }
+
+    /// A quicker route found while driving, with what taking it changes besides the time.
+    struct FasterRouteOffer: Equatable {
+        var route: RouteOption
+        var savedMinutes: Int
+        var summary: String
     }
 
     /// A warning for the driver (Android `AlertInfo`): a speed camera ahead.
@@ -49,6 +60,17 @@ final class NavigationStore: NSObject, ObservableObject {
     @Published private(set) var currentRoad = ""
     @Published private(set) var activeAlert: NavigationAlert?
     @Published var searchText = ""
+    /// Where planning starts when it is not the car's position, to look at a route ahead of time.
+    @Published private(set) var customOrigin: MKMapItem?
+    /// Stops on the way, in order, and the roads avoided, for this trip only.
+    @Published private(set) var stops: [MKMapItem] = []
+    @Published private(set) var avoidedRoads: [AvoidedRoad] = []
+    /// A plain message about the last trip change ("Avoiding Exit 12"), cleared with the trip.
+    @Published var tripNotice: String?
+    @Published private(set) var fasterOffer: FasterRouteOffer?
+    /// The next lower limit ahead and how far it is, while the route carries limits.
+    @Published private(set) var nextLimitDrop: SpeedLimitLookahead.Drop?
+    @Published private(set) var parkingNearby: [ParkingSpot] = []
 
     let events = PassthroughSubject<TripEvent, Never>()
     let locationManager = CLLocationManager()
@@ -61,6 +83,13 @@ final class NavigationStore: NSObject, ObservableObject {
     private var alertedCameras: Set<SpeedCamera> = []
     private var countryCode: String?
     private let log = Logger(subsystem: "com.horizonnav.ios", category: "guidance")
+    /// The trip before the last avoided road, for Undo.
+    private var beforeAvoid: (roads: [AvoidedRoad], options: [RouteOption], selected: Int)?
+    private var spokenLimitDrops: Set<Double> = []
+    private var lastFasterCheck = Date.distantPast
+    private var fasterCheckRunning = false
+    private var parkingAttempts = 0
+    private var lastParkingAttempt = Date.distantPast
 
     static let fallbackCoordinate = CLLocationCoordinate2D(latitude: 51.5072, longitude: -0.1276)
 
@@ -100,8 +129,12 @@ final class NavigationStore: NSObject, ObservableObject {
         stopGuidance(notify: phase == .guiding || phase == .rerouting)
         phase = .planning
         lastError = nil
+        stops = []
+        avoidedRoads = []
+        beforeAvoid = nil
+        tripNotice = nil
         do {
-            let options = try await routing.routes(for: RouteRequest(origin: currentCoordinate, destination: item, heading: currentHeading))
+            let options = withArrivalSide(try await routing.routes(for: planningRequest(to: item)), destination: item)
             destination = item
             routeOptions = options
             selectedRouteIndex = 0
@@ -117,6 +150,50 @@ final class NavigationStore: NSObject, ObservableObject {
         }
     }
 
+    /// A request from the chosen start (or the car) with this trip's stops and avoided roads.
+    private func planningRequest(to item: MKMapItem, alternatives: Bool = true) -> RouteRequest {
+        RouteRequest(origin: customOrigin?.placemark.coordinate ?? currentCoordinate, destination: item,
+                     heading: customOrigin == nil ? currentHeading : nil, wantsAlternatives: alternatives,
+                     via: stops.map(\.placemark.coordinate), avoid: avoidedRoads)
+    }
+
+    /// The router's arrival side, corrected from the geometry when the destination is clearly to one side.
+    private func withArrivalSide(_ options: [RouteOption], destination: MKMapItem) -> [RouteOption] {
+        let place = (destination as? EntrancePlaceItem)?.building ?? destination.placemark.coordinate
+        return options.map { option in
+            var route = option
+            if let last = route.steps.indices.last, route.steps[last].isArrival,
+               let side = ArrivalSide.side(route: route.coordinates, destination: place) {
+                route.steps[last].maneuver = side
+            }
+            return route
+        }
+    }
+
+    /// Plans from somewhere other than the car, or from the car again with nil.
+    func setOrigin(_ item: MKMapItem?) {
+        customOrigin = item
+    }
+
+    /// Plans the current trip again in route preview after a stop or an avoided road changed, keeping the old routes on failure.
+    private func replanPreview() async -> Bool {
+        guard let destination, phase == .previewing else { return false }
+        phase = .planning
+        lastError = nil
+        do {
+            let options = withArrivalSide(try await routing.routes(for: planningRequest(to: destination)), destination: destination)
+            routeOptions = options
+            selectedRouteIndex = 0
+            phase = .previewing
+            saveTrip(options)
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            phase = .previewing
+            return false
+        }
+    }
+
     func selectRoute(_ index: Int) {
         guard routeOptions.indices.contains(index) else { return }
         selectedRouteIndex = index
@@ -129,6 +206,10 @@ final class NavigationStore: NSObject, ObservableObject {
         voicePlanner.reset()
         alertedCameras.removeAll()
         loadCameras(for: route)
+        // A route planned from somewhere else is driven from the car.
+        customOrigin = nil
+        lastFasterCheck = Date()
+        parkingAttempts = 0
         phase = .guiding
         locationManager.allowsBackgroundLocationUpdates = true
         if let location = locationManager.location { process(location) } else { guidance = engine?.update(with: CLLocation(latitude: route.coordinates[0].latitude, longitude: route.coordinates[0].longitude)) }
@@ -159,6 +240,10 @@ final class NavigationStore: NSObject, ObservableObject {
         stopGuidance(notify: true)
         routeOptions = []
         destination = nil
+        stops = []
+        avoidedRoads = []
+        beforeAvoid = nil
+        tripNotice = nil
         phase = .idle
     }
 
@@ -185,6 +270,7 @@ final class NavigationStore: NSObject, ObservableObject {
         guard let route = selectedRoute else { return }
         currentSpeed = max(location.speed, 0)
         speedLimit = route.speedLimit(at: update.progress)
+        trackLimitDrop(on: route, progress: update.progress)
         if let index = update.upcomingStepIndex, index > 0 { currentRoad = route.steps[index - 1].street } else if update.upcomingStepIndex == 0 { currentRoad = "" }
         guard camerasEnabled, let warning = SpeedCameras.warning(cameras, progress: update.progress, speed: currentSpeed,
                                                                  heading: location.course >= 0 ? location.course : nil),
@@ -238,6 +324,10 @@ final class NavigationStore: NSObject, ObservableObject {
     private func stopGuidance(notify: Bool) {
         VoiceGuidance.shared.stop()
         speedLimit = nil
+        nextLimitDrop = nil
+        spokenLimitDrops = []
+        fasterOffer = nil
+        parkingNearby = []
         currentRoad = ""
         activeAlert = nil
         cameras = []
@@ -259,6 +349,9 @@ final class NavigationStore: NSObject, ObservableObject {
         guidance = update
         announce(update, speed: max(location.speed, 0))
         trackRoadState(update, location: location)
+        passStops(progress: update.progress)
+        checkFasterRoute(update, location: location)
+        checkParking(update)
         switch update.status {
         case .arrived:
             phase = .arrived
@@ -266,6 +359,7 @@ final class NavigationStore: NSObject, ObservableObject {
             forgetSavedTrip()
             log.info("Arrived")
             events.send(.arrived)
+            findParkingAtArrival()
         case .rerouteNeeded:
             log.info("Off route, rerouting")
             Task { await reroute(from: location) }
@@ -275,14 +369,17 @@ final class NavigationStore: NSObject, ObservableObject {
     }
 
     /// Requests a fresh route from the current position, keeping the old one if that fails.
-    func reroute(from location: CLLocation) async {
-        guard phase == .guiding, let destination else { return }
+    @discardableResult
+    func reroute(from location: CLLocation) async -> Bool {
+        guard phase == .guiding, let destination else { return false }
         phase = .rerouting
         events.send(.rerouteStarted)
         let heading = location.course >= 0 ? location.course : nil
         do {
-            let options = try await routing.routes(for: RouteRequest(origin: location.coordinate, destination: destination, heading: heading, wantsAlternatives: false))
-            guard phase == .rerouting, let route = options.first else { return }
+            let options = withArrivalSide(try await routing.routes(for: RouteRequest(
+                origin: location.coordinate, destination: destination, heading: heading, wantsAlternatives: false,
+                via: stops.map(\.placemark.coordinate), avoid: avoidedRoads)), destination: destination)
+            guard phase == .rerouting, let route = options.first else { return false }
             routeOptions = [route]
             selectedRouteIndex = 0
             saveTrip([route])
@@ -293,13 +390,206 @@ final class NavigationStore: NSObject, ObservableObject {
             guidance = engine?.update(with: location)
             log.info("Reroute finished, \(route.steps.count, privacy: .public) manoeuvres")
             events.send(.rerouteFinished(route))
+            return true
         } catch {
-            guard phase == .rerouting else { return }
+            guard phase == .rerouting else { return false }
             phase = .guiding
             lastError = error.localizedDescription
             log.error("Reroute failed: \(error.localizedDescription, privacy: .public)")
             events.send(.rerouteFailed)
+            return false
         }
+    }
+
+    /// Swaps in routes without asking the router (Undo, a quicker route), the way a finished reroute does while guiding.
+    private func adopt(_ options: [RouteOption], selected: Int) {
+        guard options.indices.contains(selected) else { return }
+        routeOptions = options
+        selectedRouteIndex = selected
+        saveTrip(options)
+        guard phase == .guiding, let route = selectedRoute else { return }
+        engine = RouteGuidance(route: route)
+        voicePlanner.reset()
+        loadCameras(for: route)
+        if let location = locationManager.location { guidance = engine?.update(with: location) }
+        events.send(.rerouteFinished(route))
+    }
+
+    // MARK: Trip changes: stops, avoided roads, quicker routes, parking
+
+    /// The trip's routes planned again with the current stops and avoided roads: in preview, or from the car while guiding.
+    private func replanTrip() async -> Bool {
+        if phase == .previewing { return await replanPreview() }
+        guard phase == .guiding, let location = locationManager.location else { return false }
+        return await reroute(from: location)
+    }
+
+    /// Adds a stop on the way and plans the trip through it (Android `NavEngine.addStop`).
+    func addStop(_ item: MKMapItem) async {
+        guard destination != nil else { return }
+        let before = stops
+        stops.append(item)
+        if await replanTrip() {
+            tripNotice = String(localized: "Stop added: \(item.name ?? String(localized: "Stop"))")
+        } else {
+            stops = before
+        }
+    }
+
+    func removeStop(_ item: MKMapItem) async {
+        let before = stops
+        stops.removeAll { $0 === item }
+        if !(await replanTrip()) { stops = before }
+    }
+
+    /// Stops the car has driven past are dropped, so a later reroute does not send it back to them.
+    private func passStops(progress: CLLocationDistance) {
+        guard !stops.isEmpty, let route = selectedRoute else { return }
+        stops.removeAll { stop in
+            guard let p = RouteGeometry.project(stop.placemark.coordinate, onto: route) else { return false }
+            return p.progress < progress - 30 && p.distance < 300
+        }
+    }
+
+    /// Plans the trip without one road and checks the new route really leaves it out. Apple Maps and the saved route cannot
+    /// avoid a road, so the driver is told and the trip is left as it was.
+    func avoid(_ road: AvoidedRoad) async {
+        let previous = (roads: avoidedRoads, options: routeOptions, selected: selectedRouteIndex)
+        avoidedRoads.append(road)
+        guard await replanTrip(), let route = selectedRoute else {
+            avoidedRoads = previous.roads
+            return
+        }
+        guard RouteAvoidance.stillUsed([road], by: route).isEmpty else {
+            avoidedRoads = previous.roads
+            adopt(previous.options, selected: previous.selected)
+            switch route.source {
+            case .online("Apple Maps"):
+                tripNotice = String(localized: "Apple Maps cannot avoid a single road. Add a TomTom or Mapbox key in Settings to avoid it.")
+            case .offline:
+                tripNotice = String(localized: "With no signal, the saved route cannot avoid a road. Download a routing pack in Offline maps.")
+            default:
+                tripNotice = String(localized: "No way round \(road.name) was found, so the route is unchanged.")
+            }
+            log.info("Avoiding a road failed with \(String(describing: route.source), privacy: .public)")
+            return
+        }
+        beforeAvoid = previous
+        tripNotice = String(localized: "Avoiding \(road.name) for this trip.")
+        log.info("Avoiding a road, \(self.avoidedRoads.count, privacy: .public) avoided")
+    }
+
+    var canUndoAvoid: Bool { beforeAvoid != nil }
+
+    /// Puts back the trip from before the last avoided road, without asking the router again.
+    func undoAvoid() {
+        guard let before = beforeAvoid else { return }
+        beforeAvoid = nil
+        avoidedRoads = before.roads
+        adopt(before.options, selected: before.selected)
+        tripNotice = nil
+    }
+
+    /// The next lower limit for the sign, and its spoken cue when chosen in Settings. Updated only when it changes by more
+    /// than 15 m, as Android does, so the sign does not redraw on every fix.
+    private func trackLimitDrop(on route: RouteOption, progress: CLLocationDistance) {
+        let drop = SpeedLimitLookahead.nextDrop(in: route.speedLimits, progress: progress, speed: currentSpeed, showing: nextLimitDrop != nil)
+        if drop?.metersPerSecond != nextLimitDrop?.metersPerSecond || abs((drop?.distance ?? 0) - (nextLimitDrop?.distance ?? 0)) > 15 {
+            nextLimitDrop = drop
+        }
+        guard let drop, AppSettings.speakLimitDrops, spokenLimitDrops.insert(drop.start).inserted else { return }
+        let distance = VoicePromptPlanner.spokenDistance(drop.distance, imperial: AppLocale.usesImperialDistances)
+        VoiceGuidance.shared.speak(VoicePrompt(key: "limit", text: String(localized: "Speed limit \(SpeedDisplay.value(drop.metersPerSecond)) in \(distance)"), isAlert: true))
+    }
+
+    /// Every 2 minutes with 5 or more left, fresh routes are asked for from the car and a clearly quicker one is offered
+    /// (Android `NavEngine.checkFaster`). Keep, or no answer within 25 seconds, waits 5 minutes before the next look.
+    private func checkFasterRoute(_ update: GuidanceUpdate, location: CLLocation) {
+        guard AppSettings.fasterRoutes, fasterOffer == nil, !fasterCheckRunning, update.status == .onRoute,
+              update.remainingTime >= FasterRoutePolicy.minimumRemaining, NetworkMonitor.shared.isOnlineNow,
+              Date().timeIntervalSince(lastFasterCheck) >= FasterRoutePolicy.checkInterval,
+              let destination, let route = selectedRoute else { return }
+        lastFasterCheck = Date()
+        fasterCheckRunning = true
+        let start = RouteGeometry.index(atProgress: update.progress, cumulative: route.cumulative)
+        let ahead = Array(route.coordinates[start...])
+        let request = RouteRequest(origin: location.coordinate, destination: destination, heading: location.course >= 0 ? location.course : nil,
+                                   wantsAlternatives: true, via: stops.map(\.placemark.coordinate), avoid: avoidedRoads)
+        let routing = self.routing
+        Task { [weak self] in
+            let fresh = (try? await routing.routes(for: request)) ?? []
+            let offer = await Task.detached(priority: .utility) { FasterRoutePolicy.offer(fresh: fresh, ahead: ahead) }.value
+            guard let self else { return }
+            self.fasterCheckRunning = false
+            guard let offer, self.phase == .guiding, self.selectedRoute?.id == route.id else { return }
+            let shown = FasterRouteOffer(route: self.withArrivalSide([offer.faster], destination: destination)[0], savedMinutes: offer.savedMinutes,
+                                         summary: RouteChange.summary(savedMinutes: offer.savedMinutes, current: offer.same, candidate: offer.faster))
+            self.fasterOffer = shown
+            self.events.send(.fasterRouteOffered(shown))
+            VoiceGuidance.shared.speak(VoicePrompt(key: "faster", text: String(localized: "A faster route is available, saving \(offer.savedMinutes) minutes"), isAlert: true))
+            self.log.info("Quicker route offered: \(shown.summary, privacy: .public)")
+            try? await Task.sleep(for: .seconds(FasterRoutePolicy.offerDuration))
+            if self.fasterOffer == shown { self.dismissFasterRoute() }
+        }
+    }
+
+    /// Switches to the offered route (Android `acceptFaster`).
+    func acceptFasterRoute() {
+        guard let offer = fasterOffer, phase == .guiding else { return }
+        fasterOffer = nil
+        adopt([offer.route], selected: 0)
+        tripNotice = String(localized: "Switched to the faster route")
+    }
+
+    /// Keeps the current route and waits 5 minutes before looking again (Android `dismissFaster`).
+    func dismissFasterRoute() {
+        fasterOffer = nil
+        lastFasterCheck = Date().addingTimeInterval(FasterRoutePolicy.cooldown)
+    }
+
+    /// Car parks near the destination, looked for from 1.7 km out, up to 3 times 40 seconds apart (Android `checkParking`).
+    private func checkParking(_ update: GuidanceUpdate) {
+        guard AppSettings.parkingPrompt, parkingNearby.isEmpty, parkingAttempts < ParkingSearch.attempts,
+              Date().timeIntervalSince(lastParkingAttempt) >= ParkingSearch.retryAfter,
+              let destination, let route = selectedRoute, NetworkMonitor.shared.isOnlineNow,
+              ParkingSearch.shouldOffer(remaining: update.remainingDistance, routeLength: route.length, destinationName: destination.name ?? "") else { return }
+        parkingAttempts += 1
+        lastParkingAttempt = Date()
+        let place = (destination as? EntrancePlaceItem)?.building ?? destination.placemark.coordinate
+        Task { [weak self] in
+            let spots = await ParkingSearch.find(near: place)
+            guard let self, !spots.isEmpty, self.phase == .guiding, self.destination === destination else { return }
+            self.parkingNearby = spots
+            self.events.send(.parkingFound(spots))
+            self.log.info("\(spots.count, privacy: .public) car park(s) near the destination")
+        }
+    }
+
+    /// At arrival with no car park offered yet, the nearest ones are looked up once (Android `arrivalMoment`).
+    private func findParkingAtArrival() {
+        guard AppSettings.parkingPrompt, parkingNearby.isEmpty, NetworkMonitor.shared.isOnlineNow, let destination,
+              !ParkingSearch.isCarPark(destination.name ?? "") else { return }
+        let place = (destination as? EntrancePlaceItem)?.building ?? destination.placemark.coordinate
+        Task { [weak self] in
+            let spots = await ParkingSearch.find(near: place)
+            guard let self, !spots.isEmpty, self.phase == .arrived, self.destination === destination else { return }
+            self.parkingNearby = spots
+        }
+    }
+
+    /// Drives to a car park instead of the destination (Android `parkAt`), keeping guidance running.
+    func park(at spot: ParkingSpot) async {
+        let item = spot.mapItem
+        parkingNearby = []
+        if phase == .arrived {
+            await navigate(to: item)
+            startGuidance()
+            return
+        }
+        let before = (destination, stops)
+        destination = item
+        stops = []
+        if !(await replanTrip()) { (destination, stops) = before }
     }
 }
 
