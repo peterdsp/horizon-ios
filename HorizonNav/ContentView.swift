@@ -5,6 +5,7 @@ struct ContentView: View {
     @ObservedObject var store: NavigationStore
     @ObservedObject private var network = NetworkMonitor.shared
     @ObservedObject private var roadFeatures = RoadFeatureStore.shared
+    @ObservedObject private var transit = TransitStore.shared
     @StateObject private var guidanceMap = GuidanceMapModel()
     @State private var results: [MKMapItem] = []
     @State private var cameraPosition: MapCameraPosition = .automatic
@@ -25,6 +26,8 @@ struct ContentView: View {
     @AppStorage(AppSettings.Keys.soundMode) private var soundMode = 0
     @AppStorage(AppSettings.Keys.buildings3D) private var buildings3D = true
     @AppStorage(AppSettings.Keys.vehicleScale) private var vehicleScale = 1.0
+    /// "drive" or "transit": what a place picked in Where to? is planned for.
+    @AppStorage(TransitSettings.Keys.travelMode) private var travelMode = "drive"
     @Environment(\.colorScheme) private var colorScheme
 
     private var isDriving: Bool { store.phase == .guiding || store.phase == .rerouting }
@@ -59,6 +62,8 @@ struct ContentView: View {
                 .frame(maxWidth: wide ? 720 : .infinity)
             }
         }
+        // Public transport has its own screen and map over the driving one, which stays as it was underneath.
+        .overlay { if transit.phase != .idle { TransitScreen(transit: transit) } }
         .onChange(of: colorScheme) { NotificationCenter.default.post(name: .phoneAppearanceChanged, object: nil) }
         .onChange(of: network.isOnline) { _, online in if online { mapboxFailed = false } }
         .onChange(of: mapSource) { mapboxFailed = false }
@@ -75,7 +80,10 @@ struct ContentView: View {
                 }
             }
         }
-        .task { await store.runPhoneAutomationIfRequested() }
+        .task {
+            await store.runPhoneAutomationIfRequested()
+            await transit.runAutomationIfRequested()
+        }
     }
 
     // MARK: Maps
@@ -254,6 +262,12 @@ struct ContentView: View {
             .navigationSurface(radius: 22)
             if store.phase == .idle || store.phase == .previewing || store.phase == .planning {
                 VStack(spacing: 6) {
+                    Picker("Travel by", selection: $travelMode) {
+                        Label("Drive", systemImage: "car.fill").tag("drive")
+                        Label("Transit", systemImage: "tram.fill").tag("transit")
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 10)
                     OriginRow(store: store, searchingOrigin: $searchingOrigin)
                     if searchingOrigin && store.customOrigin != nil {
                         Button {
@@ -261,6 +275,14 @@ struct ContentView: View {
                             Task { await useMyLocation(store) }
                         } label: {
                             Label("My location", systemImage: "location.fill").frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .font(.subheadline)
+                        .padding(.horizontal, 14)
+                    }
+                    if travelMode == "transit", let saved = transit.savedTrip, saved.isCurrent(), store.phase == .idle {
+                        Button { transit.openSavedTrip() } label: {
+                            Label("Saved trip to \(saved.destinationName)", systemImage: "arrow.down.circle")
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .font(.subheadline)
                         .padding(.horizontal, 14)
@@ -314,6 +336,10 @@ struct ContentView: View {
                 store.searchText = ""
                 store.setOrigin(item)
                 if store.phase == .previewing, let destination = store.destination { await store.navigate(to: destination) }
+            } else if travelMode == "transit" {
+                // Public transport is asked of Transitous only when the person has chosen Transit.
+                if store.phase == .previewing { store.stopNavigating() }
+                await transit.plan(to: item, from: store.customOrigin, here: store.currentCoordinate)
             } else {
                 await store.navigate(to: item)
             }

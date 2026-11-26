@@ -13,6 +13,7 @@
 		19D3147D40C67F034E8FE9F0 /* SpeedSign.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4ECF79380EDDADCA9CB51E3 /* SpeedSign.swift */; };
 		1A44DCE030EDB5A45438CFA4 /* PhoneNavigationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92208C204B6D46980251DB8D /* PhoneNavigationState.swift */; };
 		1AFB6C89D1C750E4991DC17C /* MapboxMaps in Frameworks */ = {isa = PBXBuildFile; productRef = 4E1F7F113CDFEC74982597D1 /* MapboxMaps */; };
+		1BAB22210F6D56A4EC9CDB7C /* TransitViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCBABCCBC431E560C88AE840 /* TransitViews.swift */; };
 		1C06EC9E22013DC236BC2A28 /* ProviderSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C507BDAC82097B3A5E877DB /* ProviderSupport.swift */; };
 		1E19E409F6D742CCEF47FF7C /* VoiceTimingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8213C378CAA9689AFB62F49 /* VoiceTimingTests.swift */; };
 		1E271E377DF2C8757BFE9615 /* JunctionPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7224FB475760B90AD7150C5 /* JunctionPreview.swift */; };
@@ -24,6 +25,7 @@
 		37929B7D35B83B0255E9FBA2 /* mapbox-geocode.json in Resources */ = {isa = PBXBuildFile; fileRef = D182FFE39FCCD08898F917D8 /* mapbox-geocode.json */; };
 		386943218610DC1A575A4506 /* OfflineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17B87C41CD9660D1DAADB5D2 /* OfflineTests.swift */; };
 		38B61EBD66673BE27C134F97 /* SpeedCameras.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE909D88A142C2D80B58921A /* SpeedCameras.swift */; };
+		3A1E679E84B4CE19F4DF0A8C /* transitous-plan-berlin.json in Resources */ = {isa = PBXBuildFile; fileRef = 3962EE3CA31D37CC5F6471FA /* transitous-plan-berlin.json */; };
 		3AC87648B18A9C3DA242D725 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04E9A35413956700DAF89D1 /* SettingsView.swift */; };
 		3C4BE6B7ECE067BF3C920EA7 /* VoiceGuidance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39831CF4F47DBBB6F173914B /* VoiceGuidance.swift */; };
 		427646E25B2319D5B80A3F94 /* RouteRestrictions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86FE8F7905F4277D2182E2D6 /* RouteRestrictions.swift */; };
@@ -32,16 +34,20 @@
 		56F4C1993B13BB26ED659384 /* mapbox-searchbox.json in Resources */ = {isa = PBXBuildFile; fileRef = D36033680B5DF9C222629BF1 /* mapbox-searchbox.json */; };
 		59DD550B34028B1AF4A0AF0D /* NavigationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1AEA8DD4AF1E5B600039F6 /* NavigationStore.swift */; };
 		61B571428B84DA8EBAD98DB7 /* CarPlayManeuvers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30FAA25192D896D177E692D8 /* CarPlayManeuvers.swift */; };
+		6A3B7A6EF97516D1129820CF /* TransitStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5562200868049732A9FD38A /* TransitStore.swift */; };
 		6DD4157A931C247AE82AAA73 /* tomtom-search.json in Resources */ = {isa = PBXBuildFile; fileRef = 660DAF332134879DA4A84296 /* tomtom-search.json */; };
 		7149A7FFEF526CA4C746EA9A /* GuidanceMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD62BAA815EFF2D809077E20 /* GuidanceMap.swift */; };
 		74F9D95ACE5F87B7348A4832 /* HorizonVehicle.glb in Resources */ = {isa = PBXBuildFile; fileRef = 614E816892075CF7D7225BFA /* HorizonVehicle.glb */; };
 		766B91B82A13C4F0BD979E33 /* PackCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A690C0FAFDACB2E4D1422D7 /* PackCatalog.swift */; };
 		76A356609EE5C5EBBFD3F775 /* PhoneNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9238CFE1E1366537B9D31BD4 /* PhoneNavigationTests.swift */; };
 		79E943DF1C8A87B489BC8696 /* OfflineRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 422D25D0FFA8BDFD84C30058 /* OfflineRouting.swift */; };
+		7F31E32BD3D817F9AE6826E8 /* transitous-plan-zurich-arriveby.json in Resources */ = {isa = PBXBuildFile; fileRef = E16B2D62405FCA0766757199 /* transitous-plan-zurich-arriveby.json */; };
+		81D0AF00A457D0397CA4042F /* TransitGuidance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35055F925BFD807D2C3AC1E8 /* TransitGuidance.swift */; };
 		82A8CA54E86F91C0FFE136B9 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B7F8B8DDD6C08B9EDDBBAE /* NetworkMonitor.swift */; };
 		8CEFF4760A1B3AA8D99D1D0E /* ProviderKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7992B873DF15B2F6C1D2EA41 /* ProviderKeys.swift */; };
 		8E6D263E868935A72EFDB8F3 /* RouteCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 573C94860557D772160FD07F /* RouteCache.swift */; };
 		913E7522DF0F4713EBCA1D49 /* mapbox-directions.json in Resources */ = {isa = PBXBuildFile; fileRef = 12DB274C95C955347B18C9C0 /* mapbox-directions.json */; };
+		A4C9E2CF41D4327B2729BD0E /* transitous-trip-nyc.json in Resources */ = {isa = PBXBuildFile; fileRef = 536FCBC805371B2CC0F991DB /* transitous-trip-nyc.json */; };
 		A5101EEAF8EEAEBEC4DF81EC /* OfflineMapsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A51D14F80D3BB2D08A95F12 /* OfflineMapsView.swift */; };
 		A583A12AE3B60173B3FB5E71 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5039D498498215F2014D9995 /* ContentView.swift */; };
 		A71A15093CCE5F50917EBD04 /* FeatureSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC322B048AB36FEB74AAF681 /* FeatureSheet.swift */; };
@@ -51,6 +57,7 @@
 		AD711FB96ACF6EE4571CF983 /* ProviderParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5A3CA602BE84354DB44BE85 /* ProviderParsingTests.swift */; };
 		AE50142935E59CD6EEA2C1FA /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42ADA62D6A65A34506330EBA /* AppDelegate.swift */; };
 		B0019C2F86B606E9C1DE9BD0 /* PhoneMapPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = E13A9FC0E5FEE78BBF218A46 /* PhoneMapPolicy.swift */; };
+		BA7C9BE79ABF7DA0C7FB1FA5 /* TransitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 570D9FD320C2A9CAB2C71AC6 /* TransitTests.swift */; };
 		BC2A8E361D31834D19D4B854 /* PhoneMapRendering.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6991E54081683DA263468B6 /* PhoneMapRendering.swift */; };
 		C36A3D7D3A3DC8E8D0D813F4 /* GuidanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4396885FAA2FDB1ADF2152C3 /* GuidanceTests.swift */; };
 		C4578D48645E733B7D391534 /* NavigationPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB09CEB1C6777A95A3FE7F03 /* NavigationPolicy.swift */; };
@@ -58,8 +65,10 @@
 		CE3DFFF640F811D2C49F385E /* OpenMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C892718F9B9A44766CCB6F /* OpenMapView.swift */; };
 		CFCAE32CB5695D0C6402F78F /* MapboxProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04CE05F7CD21A9DDEF7B981F /* MapboxProvider.swift */; };
 		D074FE8FBC8B3A984729F1E7 /* RouteStops.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB45ACC1C98156D40DA19C16 /* RouteStops.swift */; };
+		D7475EBEDFBE45CCB7CE2B60 /* Transit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 577D5BCE1523913D15145D60 /* Transit.swift */; };
 		D7E8071741B728DBB13A3A41 /* HorizonNavApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9930A1F40AF88D9A86B361A /* HorizonNavApp.swift */; };
 		DAC516764046603E84797CBC /* Maneuver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 783B50930AFB1AACC4C508DF /* Maneuver.swift */; };
+		DF7D3758DC7548DED358D086 /* transitous-plan-nyc.json in Resources */ = {isa = PBXBuildFile; fileRef = 9B246BE41D5C159E1CFE3435 /* transitous-plan-nyc.json */; };
 		E0B6C55755F0ECE765C76575 /* TripViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF8C8302F3363BC5A56BAA51 /* TripViews.swift */; };
 		E5AD77FCC1C4B28D48887DA1 /* ProviderRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BC35D3A48373CDEB38A5C76 /* ProviderRouting.swift */; };
 		E68B800CA2B1E9793647CD5F /* CarPlayMapViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EDC71B9B25B7AD31784DF76 /* CarPlayMapViewController.swift */; };
@@ -94,7 +103,9 @@
 		1ADC5D6F55B9C95AB321512A /* ArrivalHelp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrivalHelp.swift; sourceTree = "<group>"; };
 		1C507BDAC82097B3A5E877DB /* ProviderSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderSupport.swift; sourceTree = "<group>"; };
 		30FAA25192D896D177E692D8 /* CarPlayManeuvers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarPlayManeuvers.swift; sourceTree = "<group>"; };
+		35055F925BFD807D2C3AC1E8 /* TransitGuidance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitGuidance.swift; sourceTree = "<group>"; };
 		371EFD2440F962ED9E56C99C /* LaneImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaneImage.swift; sourceTree = "<group>"; };
+		3962EE3CA31D37CC5F6471FA /* transitous-plan-berlin.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "transitous-plan-berlin.json"; sourceTree = "<group>"; };
 		39831CF4F47DBBB6F173914B /* VoiceGuidance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceGuidance.swift; sourceTree = "<group>"; };
 		3B8F3F439BB183BDDF65BDC9 /* HorizonNav.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = HorizonNav.xcconfig; sourceTree = "<group>"; };
 		422D25D0FFA8BDFD84C30058 /* OfflineRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineRouting.swift; sourceTree = "<group>"; };
@@ -105,7 +116,10 @@
 		4A51D14F80D3BB2D08A95F12 /* OfflineMapsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineMapsView.swift; sourceTree = "<group>"; };
 		4BC67BBE6ED3DBFA8F961B27 /* HorizonNav.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = HorizonNav.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5039D498498215F2014D9995 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		536FCBC805371B2CC0F991DB /* transitous-trip-nyc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "transitous-trip-nyc.json"; sourceTree = "<group>"; };
+		570D9FD320C2A9CAB2C71AC6 /* TransitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitTests.swift; sourceTree = "<group>"; };
 		573C94860557D772160FD07F /* RouteCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteCache.swift; sourceTree = "<group>"; };
+		577D5BCE1523913D15145D60 /* Transit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Transit.swift; sourceTree = "<group>"; };
 		5977C187B264C02BD1341F29 /* Routing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Routing.swift; sourceTree = "<group>"; };
 		60B7F8B8DDD6C08B9EDDBBAE /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		614E816892075CF7D7225BFA /* HorizonVehicle.glb */ = {isa = PBXFileReference; path = HorizonVehicle.glb; sourceTree = "<group>"; };
@@ -120,12 +134,15 @@
 		9285D9D1E0AA1BF1C06B35AD /* NavigationCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationCamera.swift; sourceTree = "<group>"; };
 		92B2069EBBA8C6F1A00FB135 /* RoutePlanningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePlanningTests.swift; sourceTree = "<group>"; };
 		9969FC5DCF189506D4387429 /* TomTomProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TomTomProvider.swift; sourceTree = "<group>"; };
+		9B246BE41D5C159E1CFE3435 /* transitous-plan-nyc.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "transitous-plan-nyc.json"; sourceTree = "<group>"; };
 		9F95F53B25A21692269E37C7 /* MapboxPhoneMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapboxPhoneMap.swift; sourceTree = "<group>"; };
 		A0A3EE5A4A651268050D0CE1 /* tomtom-route.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tomtom-route.json"; sourceTree = "<group>"; };
+		A5562200868049732A9FD38A /* TransitStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitStore.swift; sourceTree = "<group>"; };
 		A92E224813C8ECA4AD0BE7DC /* valhalla-route.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "valhalla-route.json"; sourceTree = "<group>"; };
 		A9930A1F40AF88D9A86B361A /* HorizonNavApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HorizonNavApp.swift; sourceTree = "<group>"; };
 		AD62BAA815EFF2D809077E20 /* GuidanceMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuidanceMap.swift; sourceTree = "<group>"; };
 		BB09CEB1C6777A95A3FE7F03 /* NavigationPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationPolicy.swift; sourceTree = "<group>"; };
+		BCBABCCBC431E560C88AE840 /* TransitViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitViews.swift; sourceTree = "<group>"; };
 		C464952F361517A4EFCDACB6 /* overpass-cameras.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "overpass-cameras.json"; sourceTree = "<group>"; };
 		C4ECF79380EDDADCA9CB51E3 /* SpeedSign.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeedSign.swift; sourceTree = "<group>"; };
 		C7224FB475760B90AD7150C5 /* JunctionPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JunctionPreview.swift; sourceTree = "<group>"; };
@@ -141,6 +158,7 @@
 		D8213C378CAA9689AFB62F49 /* VoiceTimingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceTimingTests.swift; sourceTree = "<group>"; };
 		D8A2F82F74EDF14CA8F45F65 /* RoutePlanning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePlanning.swift; sourceTree = "<group>"; };
 		E13A9FC0E5FEE78BBF218A46 /* PhoneMapPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneMapPolicy.swift; sourceTree = "<group>"; };
+		E16B2D62405FCA0766757199 /* transitous-plan-zurich-arriveby.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "transitous-plan-zurich-arriveby.json"; sourceTree = "<group>"; };
 		E5A3CA602BE84354DB44BE85 /* ProviderParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderParsingTests.swift; sourceTree = "<group>"; };
 		EAF4CC0FE29AE51AD1E8C3F4 /* HeadUnitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadUnitTests.swift; sourceTree = "<group>"; };
 		F6991E54081683DA263468B6 /* PhoneMapRendering.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneMapRendering.swift; sourceTree = "<group>"; };
@@ -174,6 +192,7 @@
 				9238CFE1E1366537B9D31BD4 /* PhoneNavigationTests.swift */,
 				E5A3CA602BE84354DB44BE85 /* ProviderParsingTests.swift */,
 				92B2069EBBA8C6F1A00FB135 /* RoutePlanningTests.swift */,
+				570D9FD320C2A9CAB2C71AC6 /* TransitTests.swift */,
 				D8213C378CAA9689AFB62F49 /* VoiceTimingTests.swift */,
 				D2216D924D19ACEDFE3B0834 /* Fixtures */,
 			);
@@ -236,6 +255,10 @@
 				FE909D88A142C2D80B58921A /* SpeedCameras.swift */,
 				C4ECF79380EDDADCA9CB51E3 /* SpeedSign.swift */,
 				9969FC5DCF189506D4387429 /* TomTomProvider.swift */,
+				577D5BCE1523913D15145D60 /* Transit.swift */,
+				35055F925BFD807D2C3AC1E8 /* TransitGuidance.swift */,
+				A5562200868049732A9FD38A /* TransitStore.swift */,
+				BCBABCCBC431E560C88AE840 /* TransitViews.swift */,
 				FF8C8302F3363BC5A56BAA51 /* TripViews.swift */,
 				39831CF4F47DBBB6F173914B /* VoiceGuidance.swift */,
 			);
@@ -260,6 +283,10 @@
 				C464952F361517A4EFCDACB6 /* overpass-cameras.json */,
 				A0A3EE5A4A651268050D0CE1 /* tomtom-route.json */,
 				660DAF332134879DA4A84296 /* tomtom-search.json */,
+				3962EE3CA31D37CC5F6471FA /* transitous-plan-berlin.json */,
+				9B246BE41D5C159E1CFE3435 /* transitous-plan-nyc.json */,
+				E16B2D62405FCA0766757199 /* transitous-plan-zurich-arriveby.json */,
+				536FCBC805371B2CC0F991DB /* transitous-trip-nyc.json */,
 				A92E224813C8ECA4AD0BE7DC /* valhalla-route.json */,
 			);
 			path = Fixtures;
@@ -382,6 +409,10 @@
 				55E5C256121C8D86BEB09D1E /* overpass-cameras.json in Resources */,
 				A71ECDFD932001024431BE52 /* tomtom-route.json in Resources */,
 				6DD4157A931C247AE82AAA73 /* tomtom-search.json in Resources */,
+				3A1E679E84B4CE19F4DF0A8C /* transitous-plan-berlin.json in Resources */,
+				DF7D3758DC7548DED358D086 /* transitous-plan-nyc.json in Resources */,
+				7F31E32BD3D817F9AE6826E8 /* transitous-plan-zurich-arriveby.json in Resources */,
+				A4C9E2CF41D4327B2729BD0E /* transitous-trip-nyc.json in Resources */,
 				16C09E9E4C8E321E9F880690 /* valhalla-route.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -435,6 +466,10 @@
 				38B61EBD66673BE27C134F97 /* SpeedCameras.swift in Sources */,
 				19D3147D40C67F034E8FE9F0 /* SpeedSign.swift in Sources */,
 				F9950A2E8C8C15508E1937C7 /* TomTomProvider.swift in Sources */,
+				D7475EBEDFBE45CCB7CE2B60 /* Transit.swift in Sources */,
+				81D0AF00A457D0397CA4042F /* TransitGuidance.swift in Sources */,
+				6A3B7A6EF97516D1129820CF /* TransitStore.swift in Sources */,
+				1BAB22210F6D56A4EC9CDB7C /* TransitViews.swift in Sources */,
 				E0B6C55755F0ECE765C76575 /* TripViews.swift in Sources */,
 				3C4BE6B7ECE067BF3C920EA7 /* VoiceGuidance.swift in Sources */,
 			);
@@ -451,6 +486,7 @@
 				76A356609EE5C5EBBFD3F775 /* PhoneNavigationTests.swift in Sources */,
 				AD711FB96ACF6EE4571CF983 /* ProviderParsingTests.swift in Sources */,
 				3358F717BFED13253D04374D /* RoutePlanningTests.swift in Sources */,
+				BA7C9BE79ABF7DA0C7FB1FA5 /* TransitTests.swift in Sources */,
 				1E19E409F6D742CCEF47FF7C /* VoiceTimingTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

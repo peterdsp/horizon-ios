@@ -30,6 +30,6 @@
     <key>UIBackgroundModes</key><array><string>audio</string><string>location</string></array>
     <key>HNMapboxAccessToken</key><string>$(HN_MAPBOX_ACCESS_TOKEN)</string>
     <key>HNTomTomAPIKey</key><string>$(HN_TOMTOM_API_KEY)</string>
-    <key>NSLocationWhenInUseUsageDescription</key><string>Horizon Nav uses your location to show your position and guide your route.</string>
+    <key>NSLocationWhenInUseUsageDescription</key><string>Horizon Nav uses your location to show your position and guide your route, including walks to public transport stops and alerts before your stop while a transit trip is followed.</string>
 </dict>
 </plist>

@@ -17,6 +17,8 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.parkingPrompt) private var parkingPrompt = true
     @AppStorage(AppSettings.Keys.navigationZoom) private var navigationZoom = NavigationZoom.standard.rawValue
     @AppStorage(AppSettings.Keys.buildings3D) private var buildings3D = true
+    @AppStorage(TransitSettings.Keys.stopAlert) private var stopAlert = StopAlertSetting.oneStop.rawValue
+    @AppStorage(TransitSettings.Keys.stopHaptics) private var stopHaptics = true
 
     var body: some View {
         NavigationStack {
@@ -58,6 +60,16 @@ struct SettingsView: View {
                     Text("While driving")
                 } footer: {
                     Text("A quicker route found on the way is offered with what it changes, and car parks from OpenStreetMap are offered as you get close.")
+                }
+                Section {
+                    Picker("Alert before your stop", selection: $stopAlert) {
+                        ForEach(StopAlertSetting.allCases) { Text($0.title).tag($0.rawValue) }
+                    }
+                    Toggle("Vibrate with stop alerts", isOn: $stopHaptics)
+                } header: {
+                    Text("Public transport")
+                } footer: {
+                    Text("Choose Transit under Where to? to plan with [Transitous](https://transitous.org), a free community service, which receives the start, destination and time of each search. Stop alerts are spoken and shown as a notification, also with the screen locked, and again as you arrive. Timetables come from [these sources](https://transitous.org/sources/) and OpenStreetMap.")
                 }
                 Section {
                     Picker("Day and night", selection: $carPlayAppearance) {

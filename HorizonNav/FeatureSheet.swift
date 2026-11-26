@@ -9,7 +9,7 @@ struct FeatureSheet: View {
         var id: String { rawValue }
     }
 
-    static let featureRevision = 5
+    static let featureRevision = 6
     private static let seenKey = "featureSheetRevisionSeen"
 
     /// The guide on first launch, what's new after an update with new features, otherwise nothing.
@@ -59,18 +59,6 @@ struct FeatureSheet: View {
                  detail: "Traffic lights, level crossings and stop signs on your route show on the map as you drive, from OpenStreetMap, and a sign with the lanes to use stands at the next junction."),
             Item(symbol: "play.circle", title: "Preview a junction",
                  detail: "Before you start, tap Preview a junction and pick a turn or exit to watch a short drive through it, with the instruction and the lanes."),
-        ]
-        // This revision's features: last in the guide, first in what's new.
-        let newest = [
-            Item(symbol: "gauge.with.dots.needle.67percent", title: "Guidance at a glance",
-                 detail: "While driving, the turn card shows the exit number, the road and its signpost, with the lanes to use under it. Your speed and the limit sit at the bottom left, and the bar at the bottom shows the time and distance left and your arrival time, with the button that ends the route."),
-            Item(symbol: "trafficlight", title: "Road events ahead",
-                 detail: "A small list at the bottom left counts down the next traffic lights, level crossings and stop signs on your route, from OpenStreetMap. The same signs show on the map, on the phone and in CarPlay."),
-            Item(symbol: "view.3d", title: "Mapbox 3D",
-                 detail: "Add a public Mapbox token (pk.) and choose Mapbox 3D under Settings > Map for 3D buildings, live traffic lines and a 3D car in the tilted view. The view button, Zoom while driving, the route overview and junction previews work as on the other maps. If the Mapbox map cannot load, OpenStreetMap is used. Vehicle size sets how large the car is drawn."),
-        ]
-        // The previous revision's features, still shown to anyone updating from before them.
-        let latest = [
             Item(symbol: "mappin.and.ellipse", title: "Plan from anywhere",
                  detail: "Tap From under Where to? and search for a starting point to look at a route ahead of time. Tap the location button to start from where you are again."),
             Item(symbol: "fuelpump.fill", title: "Stops along the route",
@@ -87,6 +75,32 @@ struct FeatureSheet: View {
                  detail: "Tap Download for offline in the route preview to save the map along the route. The preview says whether a routing pack covers the trip and offers the one you need."),
             Item(symbol: "ticket", title: "Vignettes and low-emission zones",
                  detail: "With a TomTom key, routes that need a motorway vignette or enter a low-emission zone are flagged in the preview and drawn in orange, with links to the rules."),
+        ]
+        // This revision's features: last in the guide, first in what's new.
+        let newest = [
+            Item(symbol: "tram.fill", title: "Public transport",
+                 detail: "Choose Transit under Where to? and pick a place. Choose Leave now, Depart at or Arrive by with a date and time; the time you chose stays at the top while you compare. Trips come from Transitous, a free community service, which receives the start, destination and time of each search."),
+            Item(symbol: "arrow.up.arrow.down", title: "Compare trips",
+                 detail: "Sort by earliest arrival, fewest changes or least walking. Each trip shows its walking time and distance, the shortest time to change, and whether its times are live."),
+            Item(symbol: "signpost.right.and.left", title: "Changes in detail",
+                 detail: "Open a trip for each leg's line, direction, stops and times, the platforms to arrive at and leave from, and the walk between them with its stairs and lifts, wherever the timetable has them."),
+            Item(symbol: "figure.walk", title: "Follow a transit trip",
+                 detail: "Tap Start navigation. Walks to and between stops are guided turn by turn and spoken. At the stop, the screen shows the line, its direction, the stops to go and where to get off. The arrows at the bottom move between legs by hand."),
+            Item(symbol: "bell.badge", title: "Alerts before your stop",
+                 detail: "An alert is spoken and shown before your stop, and again as you arrive, also with the screen locked. Choose a number of stops or minutes, and vibration, in Settings > Public transport."),
+            Item(symbol: "arrow.triangle.swap", title: "Missed or cancelled connections",
+                 detail: "If a ride is cancelled, a change becomes too short, or you miss your bus or train, a new trip from where you are is offered with its next departure and arrival time. Tap Take this to switch, or Keep my trip."),
+            Item(symbol: "arrow.down.circle", title: "Your trip offline",
+                 detail: "The trip you start is kept on the phone with its stops, times, platforms and walks. Open it from Saved trip under Where to? with no connection; it is marked as scheduled times."),
+        ]
+        // The previous revision's features, still shown to anyone updating from before them.
+        let latest = [
+            Item(symbol: "gauge.with.dots.needle.67percent", title: "Guidance at a glance",
+                 detail: "While driving, the turn card shows the exit number, the road and its signpost, with the lanes to use under it. Your speed and the limit sit at the bottom left, and the bar at the bottom shows the time and distance left and your arrival time, with the button that ends the route."),
+            Item(symbol: "trafficlight", title: "Road events ahead",
+                 detail: "A small list at the bottom left counts down the next traffic lights, level crossings and stop signs on your route, from OpenStreetMap. The same signs show on the map, on the phone and in CarPlay."),
+            Item(symbol: "view.3d", title: "Mapbox 3D",
+                 detail: "Add a public Mapbox token (pk.) and choose Mapbox 3D under Settings > Map for 3D buildings, live traffic lines and a 3D car in the tilted view. The view button, Zoom while driving, the route overview and junction previews work as on the other maps. If the Mapbox map cannot load, OpenStreetMap is used. Vehicle size sets how large the car is drawn."),
         ]
         if kind == .guide {
             list.insert(Item(symbol: "magnifyingglass", title: "Search anywhere",
