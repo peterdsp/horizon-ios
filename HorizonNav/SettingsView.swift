@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Keys.routingProvider) private var routingProvider = "auto"
     @AppStorage(AppSettings.Keys.searchProvider) private var searchProvider = "auto"
     @AppStorage(AppSettings.Keys.mapSource) private var mapSource = "apple"
+    @AppStorage(AppSettings.Keys.vehicleScale) private var vehicleScale = 1.0
     @AppStorage(AppSettings.Keys.soundMode) private var soundMode = 0
     @AppStorage(AppSettings.Keys.cameraWarnings) private var cameraWarnings = true
     @AppStorage(AppSettings.Keys.carPlayAppearance) private var carPlayAppearance = "car"
@@ -74,15 +75,23 @@ struct SettingsView: View {
                     Picker("Map", selection: $mapSource) {
                         Text("Apple Maps").tag("apple")
                         Text("OpenStreetMap").tag("openstreetmap")
+                        Text("Mapbox 3D").tag("mapbox")
                     }
                     Picker("Zoom while driving", selection: $navigationZoom) {
                         ForEach(NavigationZoom.allCases, id: \.rawValue) { zoom in Text(zoom.title).tag(zoom.rawValue) }
                     }
                     Toggle("3D buildings", isOn: $buildings3D)
+                    if mapSource == "mapbox" {
+                        VStack(alignment: .leading) {
+                            Text("Vehicle size")
+                            Slider(value: $vehicleScale, in: 0.65...1.55, step: 0.05)
+                                .accessibilityLabel("Vehicle size")
+                        }
+                    }
                 } header: {
                     Text("Map")
                 } footer: {
-                    Text("Apple Maps shows live traffic. The OpenStreetMap map draws areas saved in Offline maps, and is used automatically when there is no signal. While driving, the map zooms with your speed and the next turn: Closer and Wider move that half a step in or out, on the phone and in CarPlay.")
+                    Text("Apple Maps shows live traffic. Mapbox 3D uses your public pk. token and draws a 3D car when the view is tilted. The OpenStreetMap map draws areas saved in Offline maps, and is used automatically when there is no signal or the Mapbox map cannot load. CarPlay uses Apple Maps or OpenStreetMap. While driving, the map zooms with your speed and the next turn: Closer and Wider move that half a step in or out, on the phone and in CarPlay.")
                 }
             }
             .navigationTitle("Settings")

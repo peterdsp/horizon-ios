@@ -71,6 +71,8 @@ final class NavigationStore: NSObject, ObservableObject {
     /// The next lower limit ahead and how far it is, while the route carries limits.
     @Published private(set) var nextLimitDrop: SpeedLimitLookahead.Drop?
     @Published private(set) var parkingNearby: [ParkingSpot] = []
+    /// Where to draw the car on the Mapbox map: on the route line while the fix agrees with it, with a steadied heading.
+    @Published private(set) var vehiclePose: VehiclePose?
 
     let events = PassthroughSubject<TripEvent, Never>()
     let locationManager = CLLocationManager()
@@ -90,6 +92,9 @@ final class NavigationStore: NSObject, ObservableObject {
     private var fasterCheckRunning = false
     private var parkingAttempts = 0
     private var lastParkingAttempt = Date.distantPast
+    private var cameraTask: Task<Void, Never>?
+    /// Changes with each new plan, reroute or ended trip, so an answer that arrives late is dropped.
+    private var planGeneration = UUID()
 
     static let fallbackCoordinate = CLLocationCoordinate2D(latitude: 51.5072, longitude: -0.1276)
 
@@ -128,6 +133,8 @@ final class NavigationStore: NSObject, ObservableObject {
     func navigate(to item: MKMapItem) async {
         stopGuidance(notify: phase == .guiding || phase == .rerouting)
         phase = .planning
+        let generation = UUID()
+        planGeneration = generation
         lastError = nil
         stops = []
         avoidedRoads = []
@@ -135,6 +142,8 @@ final class NavigationStore: NSObject, ObservableObject {
         tripNotice = nil
         do {
             let options = withArrivalSide(try await routing.routes(for: planningRequest(to: item)), destination: item)
+            guard planGeneration == generation, phase == .planning else { return }
+            guard !options.isEmpty else { throw RoutingError.noRoute }
             destination = item
             routeOptions = options
             selectedRouteIndex = 0
@@ -142,6 +151,7 @@ final class NavigationStore: NSObject, ObservableObject {
             saveTrip(options)
             log.info("Planned \(options.count, privacy: .public) route option(s)")
         } catch {
+            guard planGeneration == generation, phase == .planning else { return }
             lastError = error.localizedDescription
             routeOptions = []
             destination = nil
@@ -201,7 +211,7 @@ final class NavigationStore: NSObject, ObservableObject {
     }
 
     func startGuidance() {
-        guard let route = selectedRoute, phase == .previewing || phase == .arrived else { return }
+        guard let route = selectedRoute, let start = route.coordinates.first, phase == .previewing || phase == .arrived else { return }
         engine = RouteGuidance(route: route)
         voicePlanner.reset()
         alertedCameras.removeAll()
@@ -212,7 +222,7 @@ final class NavigationStore: NSObject, ObservableObject {
         parkingAttempts = 0
         phase = .guiding
         locationManager.allowsBackgroundLocationUpdates = true
-        if let location = locationManager.location { process(location) } else { guidance = engine?.update(with: CLLocation(latitude: route.coordinates[0].latitude, longitude: route.coordinates[0].longitude)) }
+        if let location = locationManager.location { process(location) } else { guidance = engine?.update(with: CLLocation(latitude: start.latitude, longitude: start.longitude)) }
         events.send(.guidanceStarted(route))
         log.info("Guidance started with \(route.steps.count, privacy: .public) manoeuvres")
     }
@@ -306,7 +316,8 @@ final class NavigationStore: NSObject, ObservableObject {
         }
         let lats = route.coordinates.map(\.latitude), lons = route.coordinates.map(\.longitude)
         guard let south = lats.min(), let north = lats.max(), let west = lons.min(), let east = lons.max() else { return }
-        Task { [weak self] in
+        cameraTask?.cancel()
+        cameraTask = Task { [weak self] in
             var found: [SpeedCamera] = []
             for pack in OfflinePackStorage.installedPacks() {
                 if let text = try? String(contentsOf: pack.camerasURL, encoding: .utf8) {
@@ -315,7 +326,7 @@ final class NavigationStore: NSObject, ObservableObject {
             }
             if NetworkMonitor.shared.isOnlineNow, let online = try? await SpeedCameras.fetch(along: route) { found += online }
             let placed = SpeedCameras.place(found, on: route)
-            guard let self, self.camerasRouteID == route.id else { return }
+            guard !Task.isCancelled, let self, self.camerasRouteID == route.id else { return }
             self.cameras = placed
             self.log.info("\(placed.count, privacy: .public) speed camera(s) on the route")
         }
@@ -332,6 +343,9 @@ final class NavigationStore: NSObject, ObservableObject {
         activeAlert = nil
         cameras = []
         camerasRouteID = nil
+        cameraTask?.cancel()
+        cameraTask = nil
+        planGeneration = UUID()
         engine = nil
         guidance = nil
         locationManager.allowsBackgroundLocationUpdates = false
@@ -344,9 +358,15 @@ final class NavigationStore: NSObject, ObservableObject {
     }
 
     func process(_ location: CLLocation) {
-        guard phase == .guiding, let engine else { return }
+        guard CLLocationCoordinate2DIsValid(location.coordinate), location.horizontalAccuracy >= 0 else { return }
+        guard phase == .guiding, let engine else {
+            updateVehicle(with: location, matched: nil)
+            return
+        }
         let update = engine.update(with: location)
         guidance = update
+        let onRouteLine = update.status == .onRoute && location.horizontalAccuracy <= 30 && update.distanceFromRoute <= 15
+        updateVehicle(with: location, matched: onRouteLine ? engine.route.point(atProgress: update.progress)?.coordinate : nil)
         announce(update, speed: max(location.speed, 0))
         trackRoadState(update, location: location)
         passStops(progress: update.progress)
@@ -373,13 +393,15 @@ final class NavigationStore: NSObject, ObservableObject {
     func reroute(from location: CLLocation) async -> Bool {
         guard phase == .guiding, let destination else { return false }
         phase = .rerouting
+        let generation = planGeneration
         events.send(.rerouteStarted)
         let heading = location.course >= 0 ? location.course : nil
         do {
             let options = withArrivalSide(try await routing.routes(for: RouteRequest(
                 origin: location.coordinate, destination: destination, heading: heading, wantsAlternatives: false,
                 via: stops.map(\.placemark.coordinate), avoid: avoidedRoads)), destination: destination)
-            guard phase == .rerouting, let route = options.first else { return false }
+            guard phase == .rerouting, planGeneration == generation else { return false }
+            guard let route = options.first else { throw RoutingError.noRoute }
             routeOptions = [route]
             selectedRouteIndex = 0
             saveTrip([route])
@@ -387,12 +409,13 @@ final class NavigationStore: NSObject, ObservableObject {
             voicePlanner.reset()
             loadCameras(for: route)
             phase = .guiding
+            lastError = nil
             guidance = engine?.update(with: location)
             log.info("Reroute finished, \(route.steps.count, privacy: .public) manoeuvres")
             events.send(.rerouteFinished(route))
             return true
         } catch {
-            guard phase == .rerouting else { return false }
+            guard phase == .rerouting, planGeneration == generation else { return false }
             phase = .guiding
             lastError = error.localizedDescription
             log.error("Reroute failed: \(error.localizedDescription, privacy: .public)")
@@ -521,7 +544,9 @@ final class NavigationStore: NSObject, ObservableObject {
             let offer = await Task.detached(priority: .utility) { FasterRoutePolicy.offer(fresh: fresh, ahead: ahead) }.value
             guard let self else { return }
             self.fasterCheckRunning = false
-            guard let offer, self.phase == .guiding, self.selectedRoute?.id == route.id else { return }
+            // An answer that took so long the car is well past where it was asked from starts behind the car: drop it.
+            guard let offer, self.phase == .guiding, self.selectedRoute?.id == route.id,
+                  let latest = self.guidance, abs(latest.progress - update.progress) < 400 else { return }
             let shown = FasterRouteOffer(route: self.withArrivalSide([offer.faster], destination: destination)[0], savedMinutes: offer.savedMinutes,
                                          summary: RouteChange.summary(savedMinutes: offer.savedMinutes, current: offer.same, candidate: offer.faster))
             self.fasterOffer = shown
@@ -536,6 +561,12 @@ final class NavigationStore: NSObject, ObservableObject {
     /// Switches to the offered route (Android `acceptFaster`).
     func acceptFasterRoute() {
         guard let offer = fasterOffer, phase == .guiding else { return }
+        // The car has to be on the offered route still; after a turn off it, the offer no longer applies.
+        if let location = locationManager.location,
+           (RouteGeometry.project(location.coordinate, onto: offer.route)?.distance ?? .infinity) > 40 {
+            dismissFasterRoute()
+            return
+        }
         fasterOffer = nil
         adopt([offer.route], selected: 0)
         tripNotice = String(localized: "Switched to the faster route")
@@ -545,6 +576,24 @@ final class NavigationStore: NSObject, ObservableObject {
     func dismissFasterRoute() {
         fasterOffer = nil
         lastFasterCheck = Date().addingTimeInterval(FasterRoutePolicy.cooldown)
+    }
+
+    /// The car for the Mapbox map: held still at a crawl so it does not wander, and turned smoothly with the course.
+    private func updateVehicle(with location: CLLocation, matched: CLLocationCoordinate2D?) {
+        let previous = vehiclePose
+        if location.horizontalAccuracy > 65, previous != nil { return }
+        let coordinate = matched ?? location.coordinate
+        let previousBearing = previous?.bearing ?? max(location.course, 0)
+        let bearing = location.speed > 2.3 && location.course >= 0
+            ? PhoneCameraPolicy.easedBearing(from: previousBearing, to: location.course, amount: 0.55)
+            : previousBearing
+        let stableCoordinate: CLLocationCoordinate2D
+        if location.speed < 1.5, let previous, RouteGeometry.distance(previous.coordinate, coordinate) < 6 {
+            stableCoordinate = previous.coordinate
+        } else {
+            stableCoordinate = coordinate
+        }
+        vehiclePose = VehiclePose(coordinate: stableCoordinate, bearing: bearing, location: location)
     }
 
     /// Car parks near the destination, looked for from 1.7 km out, up to 3 times 40 seconds apart (Android `checkParking`).

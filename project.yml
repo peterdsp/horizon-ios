@@ -7,6 +7,9 @@ packages:
   MapLibre:
     url: https://github.com/maplibre/maplibre-gl-native-distribution
     from: 6.31.0
+  MapboxMaps:
+    url: https://github.com/mapbox/mapbox-maps-ios.git
+    exactVersion: 11.19.6
   ValhallaMobile:
     url: https://github.com/Rallista/valhalla-mobile
     exactVersion: 0.6.4
@@ -24,6 +27,8 @@ targets:
     dependencies:
       - package: MapLibre
         product: MapLibre
+      - package: MapboxMaps
+        product: MapboxMaps
       - package: ValhallaMobile
         product: Valhalla
     configFiles:

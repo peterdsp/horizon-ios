@@ -150,7 +150,11 @@ enum RoadFeatures {
 final class RoadFeatureStore: ObservableObject {
     static let shared = RoadFeatureStore()
 
+    /// Whether the stretch ahead has been looked up, for the phone's list of what is coming.
+    enum Status: Equatable { case idle, loading, ready, unavailable }
+
     @Published private(set) var placed: [PlacedRoadFeature] = []
+    @Published private(set) var status = Status.idle
 
     /// Each request covers this much route, and the next is asked for this far before the car reaches the end of the last.
     static let stretch: CLLocationDistance = 10_000
@@ -187,12 +191,17 @@ final class RoadFeatureStore: ObservableObject {
             loadedUntil = progress
         }
         guard task == nil, loadedUntil < route.length, progress >= loadedUntil - Self.lookAhead,
-              retryAt.map({ Date() >= $0 }) ?? true, NetworkMonitor.shared.isOnlineNow else { return }
+              retryAt.map({ Date() >= $0 }) ?? true else { return }
+        guard NetworkMonitor.shared.isOnlineNow else {
+            if placed.isEmpty { setStatus(.unavailable) }
+            return
+        }
         let from = max(loadedUntil, progress) - 50, to = min(max(loadedUntil, progress) + Self.stretch, route.length)
         let first = RouteGeometry.index(atProgress: max(from, 0), cumulative: route.cumulative)
         let last = min(RouteGeometry.index(atProgress: to, cumulative: route.cumulative) + 1, route.coordinates.count - 1)
         guard last > first else { return }
         let stretch = Array(route.coordinates[first...last])
+        if placed.isEmpty { setStatus(.loading) }
         task = Task { [weak self] in
             do {
                 let found = try await RoadFeatures.fetch(along: stretch)
@@ -201,17 +210,24 @@ final class RoadFeatureStore: ObservableObject {
                 self.placed = merged
                 self.loadedUntil = to
                 self.retryAt = nil
+                self.setStatus(.ready)
                 self.log.info("\(found.count, privacy: .public) road feature(s) up to \(Int(to), privacy: .public) m")
             } catch {
                 guard let self, self.routeID == route.id else { return }
-                // A busy server: try that stretch again in a little while.
-                self.retryAt = Date().addingTimeInterval(30)
+                // A busy server: try that stretch again in a little while, or after 5 minutes when it asked for less traffic.
+                var limited = false
+                if case .http(_, 429, _)? = error as? ProviderError { limited = true }
+                self.retryAt = Date().addingTimeInterval(limited ? 300 : 30)
+                if self.placed.isEmpty { self.setStatus(.unavailable) }
                 self.log.error("Road features failed: \(error.localizedDescription, privacy: .public)")
             }
             self?.task = nil
         }
     }
 
+    private func setStatus(_ new: Status) {
+        if status != new { status = new }
+    }
 
     private func reset() {
         task?.cancel()
@@ -220,5 +236,6 @@ final class RoadFeatureStore: ObservableObject {
         loadedUntil = 0
         retryAt = nil
         placed = []
+        setStatus(.idle)
     }
 }

@@ -72,6 +72,7 @@ enum AppSettings {
         static let fasterRoutes = "fasterRoutes"
         static let speakLimitDrops = "speakLimitDrops"
         static let parkingPrompt = "parkingPrompt"
+        static let vehicleScale = "vehicleScale"
     }
 
     static var defaults: UserDefaults { .standard }
@@ -84,7 +85,7 @@ enum AppSettings {
     static var cameraWarnings: Bool { defaults.object(forKey: Keys.cameraWarnings) as? Bool ?? true }
     /// "car", "phone", "day" or "night".
     static var carPlayAppearance: String { defaults.string(forKey: Keys.carPlayAppearance) ?? "car" }
-    /// "apple" or "openstreetmap".
+    /// "apple", "openstreetmap" or "mapbox" (the phone only; CarPlay uses Apple Maps for "mapbox").
     static var mapSource: String { defaults.string(forKey: Keys.mapSource) ?? "apple" }
     /// Offer a quicker route found while driving (Android `FASTER_ROUTE`, on by default).
     static var fasterRoutes: Bool { defaults.object(forKey: Keys.fasterRoutes) as? Bool ?? true }

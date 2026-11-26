@@ -9,7 +9,7 @@ struct FeatureSheet: View {
         var id: String { rawValue }
     }
 
-    static let featureRevision = 4
+    static let featureRevision = 5
     private static let seenKey = "featureSheetRevisionSeen"
 
     /// The guide on first launch, what's new after an update with new features, otherwise nothing.
@@ -36,7 +36,7 @@ struct FeatureSheet: View {
     private var items: [Item] {
         var list = [
             Item(symbol: "point.topleft.down.to.point.bottomright.curvepath", title: "Choose your route",
-                 detail: "Search for a place. Horizon Nav shows the fastest route and any alternatives on the map. Tap one to select it, then tap Start."),
+                 detail: "Search for a place. Horizon Nav shows the fastest route and any alternatives on the map. Tap one to select it, then tap Start navigation."),
             Item(symbol: "arrow.turn.up.right", title: "Turn-by-turn guidance",
                  detail: "The next turn and the distance to it stay at the top of the screen, and the arrival time updates as you drive."),
             Item(symbol: "arrow.triangle.2.circlepath", title: "Automatic rerouting",
@@ -61,6 +61,15 @@ struct FeatureSheet: View {
                  detail: "Before you start, tap Preview a junction and pick a turn or exit to watch a short drive through it, with the instruction and the lanes."),
         ]
         // This revision's features: last in the guide, first in what's new.
+        let newest = [
+            Item(symbol: "gauge.with.dots.needle.67percent", title: "Guidance at a glance",
+                 detail: "While driving, the turn card shows the exit number, the road and its signpost, with the lanes to use under it. Your speed and the limit sit at the bottom left, and the bar at the bottom shows the time and distance left and your arrival time, with the button that ends the route."),
+            Item(symbol: "trafficlight", title: "Road events ahead",
+                 detail: "A small list at the bottom left counts down the next traffic lights, level crossings and stop signs on your route, from OpenStreetMap. The same signs show on the map, on the phone and in CarPlay."),
+            Item(symbol: "view.3d", title: "Mapbox 3D",
+                 detail: "Add a public Mapbox token (pk.) and choose Mapbox 3D under Settings > Map for 3D buildings, live traffic lines and a 3D car in the tilted view. The view button, Zoom while driving, the route overview and junction previews work as on the other maps. If the Mapbox map cannot load, OpenStreetMap is used. Vehicle size sets how large the car is drawn."),
+        ]
+        // The previous revision's features, still shown to anyone updating from before them.
         let latest = [
             Item(symbol: "mappin.and.ellipse", title: "Plan from anywhere",
                  detail: "Tap From under Where to? and search for a starting point to look at a route ahead of time. Tap the location button to start from where you are again."),
@@ -81,10 +90,10 @@ struct FeatureSheet: View {
         ]
         if kind == .guide {
             list.insert(Item(symbol: "magnifyingglass", title: "Search anywhere",
-                             detail: "Type a place or address in Where to? at the bottom of the map."), at: 0)
-            return list + latest
+                             detail: "Type a place or address in Where to? at the top of the map."), at: 0)
+            return list + latest + newest
         }
-        return latest + list
+        return newest + latest + list
     }
 
     var body: some View {

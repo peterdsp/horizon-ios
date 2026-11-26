@@ -34,38 +34,6 @@ extension MapCameraPosition {
     }
 }
 
-/// The view switch and the overview button on the guiding map.
-struct GuidanceMapButtons: View {
-    @ObservedObject var model: GuidanceMapModel
-
-    var body: some View {
-        VStack(spacing: 10) {
-            Button {
-                model.cycleViewMode()
-            } label: {
-                Image(systemName: model.viewMode.symbolName)
-                    .font(.title3)
-                    .frame(width: 48, height: 48)
-            }
-            .buttonStyle(.plain)
-            .guidanceGlassControl()
-            .accessibilityLabel(model.viewMode.title)
-            .accessibilityHint(Text("Switches to \(model.viewMode.next.title)"))
-
-            Button {
-                model.toggleOverview()
-            } label: {
-                Image(systemName: model.showsOverview ? "location.fill" : "point.bottomleft.forward.to.point.topright.scurvepath")
-                    .font(.title3)
-                    .frame(width: 48, height: 48)
-            }
-            .buttonStyle(.plain)
-            .guidanceGlassControl()
-            .accessibilityLabel(model.showsOverview ? Text("Back to following") : Text("Route overview"))
-        }
-    }
-}
-
 /// What is left of the trip, shown with the route overview: distance, time, arrival and the traffic delay the route reported.
 struct RouteOverviewCard: View {
     var route: RouteOption
@@ -171,17 +139,5 @@ struct JunctionPreviewBanner: View {
         }
         .padding()
         .background(.regularMaterial)
-    }
-}
-
-private extension View {
-    /// The same Liquid Glass as the map's other floating controls.
-    @ViewBuilder
-    func guidanceGlassControl() -> some View {
-        if #available(iOS 26.0, *) {
-            glassEffect(.regular.interactive(), in: .circle)
-        } else {
-            background(.ultraThinMaterial, in: .circle)
-        }
     }
 }

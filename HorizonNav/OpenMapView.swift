@@ -48,7 +48,7 @@ final class OpenMapView: UIView, MLNMapViewDelegate {
     func show(routes: [RouteOption], selected: Int) {
         if !lines.isEmpty { mapView.removeAnnotations(lines) }
         // Unselected alternatives first, so the selected route draws on top.
-        let ordered = routes.enumerated().sorted { a, _ in a.offset != selected }
+        let ordered = routes.enumerated().filter { $0.offset != selected } + routes.enumerated().filter { $0.offset == selected }
         lines = ordered.compactMap { index, route in
             guard route.coordinates.count > 1 else { return nil }
             let line = MLNPolyline(coordinates: route.coordinates, count: UInt(route.coordinates.count))
