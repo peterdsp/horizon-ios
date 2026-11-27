@@ -1,6 +1,6 @@
 # Horizon for iPhone and CarPlay (unofficial)
 
-An unofficial native iOS and CarPlay version of [Horizon Maps](https://github.com/benbishop028-arch/Horizon-Maps) by Ben Bishop, which is an Android app. This is a native port, not a binary conversion: routes and search from TomTom, Mapbox or Apple Maps, offline maps and offline routing, spoken guidance, and CarPlay navigation with lanes, speed limits and camera warnings.
+An unofficial native iOS and CarPlay version of [Horizon Maps](https://github.com/benbishop028-arch/Horizon-Maps) by Ben Bishop, which is an Android app. This is a native port, not a binary conversion: routes and search from TomTom, Mapbox or Apple Maps, public transport trips from Transitous, offline maps and offline routing, spoken guidance, and CarPlay navigation with lanes, speed limits and camera warnings.
 
 The navigation rules (off-route detection, rerouting and the routing fallback policy) follow the Android app. I first offered this as a pull request to Horizon; Ben chose to keep that repo Android-only and [encouraged me to carry it on as my own project](https://github.com/benbishop028-arch/Horizon-Maps/pull/127). It is not affiliated with or supported by the Horizon project.
 
@@ -83,6 +83,35 @@ Offline maps are under the download button on the map.
 ## Spoken guidance
 
 `VoiceGuidance.swift` speaks with `AVSpeechSynthesizer` at the Android distances: a heads-up between 1.7 and 1.1 km above 18 m/s, an early lane call about 1.5 km (a mile) out on fast roads, the main call between 520 and 200 m with the lane advice, and the final call within 120 m. Each is said once per manoeuvre. The audio session uses the playback category, the voice prompt mode, and the duck-others and interrupt-spoken-audio options, so music dips and podcasts pause on the phone and in CarPlay. The voice follows the app's language and the region's units. The speaker button (phone and CarPlay) mutes; Settings also has alerts only.
+
+## Public transport
+
+Choose **Transit** under Where to? and pick a place. Trips come from [Transitous](https://transitous.org), the free, community-run public transport routing service built on MOTIS, with timetables from [its data sources](https://transitous.org/sources/) and OpenStreetMap data (© [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)). The transit screens show the same links. Transit is a phone feature: CarPlay is unchanged.
+
+- **Plan** (`Transit.swift`): Leave now, Depart at or Arrive by, with a date and time; the time searched for stays at the top of the list. Earlier and later trips come from the service's page cursors.
+- **Compare**: sort by earliest arrival, fewest changes or least walking. Each trip shows its walking time and distance, the shortest time to change, and realtime delays or cancellations where the operator sends them.
+- **Trip detail**: each leg's line, direction, boarding and alighting stops and times, platform or track (with realtime changes), the operator's stop description and the stops on the way. Walks show their distance and time, the platforms to arrive at and leave from at a change, and the stairs and lifts on the path. Station exits and entrances are not in the data the service returns, so none are shown.
+- **Follow a trip** (`TransitStore.swift`, `TransitGuidance.swift`): Start navigation guides walks with the driving guidance engine (`RouteGuidance`) on the service's walking path, with turns read from its geometry, walking times, and spoken calls about 50 m before a turn and at it. Off the path, Apple Maps plans a new walk to the same stop when there is signal. On a ride, the screen shows the line, direction, stops to go and the stop to get off at, from the position on the line or, underground, from the timetable. The arrows at the bottom move between legs by hand.
+- **Stop alerts**: a spoken cue, a notification and an optional vibration one or two stops, or two or five minutes, before the stop (Settings > Public transport), and again as you arrive. Location runs in the background only while a trip is followed, at reduced accuracy on board; the early alert is also scheduled from the timetable in case fixes stop with the phone in a pocket. A lock screen Live Activity is not part of this (it needs a widget extension); the notification carries the stop and the stops to go.
+- **Missed or cancelled**: the next ride's realtime state is asked for from 20 minutes before it leaves, every 3 minutes while waiting and every 5 on board. A cancelled ride, a change a delay has made impossible, or a rider still walking or still at the stop well after the departure (3 minutes with realtime data, 5 without) brings one search for a new trip from the current position, shown with its next departure and arrival. Take this switches to it.
+- **Offline**: the trip you start is saved on the phone (`saved-transit-trip.json`) with its legs, stops, times, platforms and walking paths, and opens from Saved trip under Where to? with no connection, marked as scheduled times. Planning a new trip needs a connection.
+
+Following the [Transitous usage policy](https://transitous.org/api/): every request sends `User-Agent: HorizonNav-iOS/<version> (https://github.com/peterdsp/horizon-ios)`; requests are made only when you search, page, start a trip, or for the realtime checks above, never in a polling loop; the same answer is reused for 90 seconds; and the transit screens link to Transitous and its sources. Transitous is run by volunteers: consider [donating](https://transitous.org/donate/).
+
+## Privacy
+
+The app has no account and no analytics. These services receive data only for the feature that uses them:
+
+| Service | When | What it receives |
+| --- | --- | --- |
+| Apple Maps (MapKit) | Search and routes without TomTom or Mapbox keys, the Apple map, walks rerouted on a transit trip | Search text near your position, the start, stops and destination of a route, map tiles for the area shown |
+| TomTom | With a TomTom key | Search text with your position, the start, stops, destination and avoided roads of a route |
+| Mapbox | With a Mapbox token | Search text with your position, the start, stops and destination of a route, map tiles with Mapbox 3D |
+| OpenStreetMap Overpass | Route preview and guidance with a connection | The route's line or area, for traffic lights, crossings, stop signs, speed cameras, stops along the route and car parks |
+| Nominatim (OpenStreetMap) | Route preview, to suggest a routing pack | A point of the trip not covered by an installed pack |
+| OpenFreeMap | The OpenStreetMap map and saved map areas | Map tile requests for the area shown or saved |
+| GitHub releases | Downloading a routing pack | The pack downloaded |
+| Transitous | Only with Transit chosen in Where to? | The start and destination coordinates and the time of each search, and the identifiers of the rides of a trip being followed, for realtime |
 
 ## CarPlay and head-unit features
 
